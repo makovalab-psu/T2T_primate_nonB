@@ -1,0 +1,6 @@
+chimp Pan_troglodytes mPanTro3.alt.cur.20231122.fasta
+bonobo  Pan_paniscus  mPanPan1.alt.cur.20231122.fasta
+gorilla Gorilla_gorilla mGorGor1.alt.cur.20231122.fasta
+borang  Pongo_pygmaeus  mPonPyg2.alt.cur.20231122.fasta
+sorang  Pongo_abelii  mPonAbe1.alt.cur.20231205.fasta
+siamang Symphalangus_syndactylus  mSymSyn1.alt.cur.20240514.fasta
