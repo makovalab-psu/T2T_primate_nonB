@@ -1,0 +1,6 @@
+Satellite/acro_ACRO1	ACRO1
+Satellite/centr_GSAT	GSAT
+Satellite/centr_GSATII	GSATII
+Satellite/subtelo_TAR1	TAR1
+Satellite_LSAU	LSAU
+Satellite_SAT-VAR_rnd-6_family-3554	SAT-VAR
