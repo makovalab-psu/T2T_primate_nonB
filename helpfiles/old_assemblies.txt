@@ -1,0 +1,5 @@
+chimp panTro6.fa
+bonobo panPan3.fa
+gorilla gorGor6.fa
+sorang ponAbe3.fa
+human hg38.fa

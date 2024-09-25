@@ -110,6 +110,7 @@ done
 # Plot with 
 Rscript plot_fig6_methylation.R
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Look at G4s with low methylation in interesting repeats.
 # We will focus on the satellites: LSAU, GSAT, GSATII, SAT-VAR_rnd-6*3554,
 # ACRO1 and TAR1. These are found in the file: 
@@ -167,3 +168,9 @@ cat T2T_primate_nonB/helpfiles/human_satellites_of_interest.txt |while read -r r
 do     
     join methylation/human/G4_tables/${alias}_combined.txt <(sort methylation/human/G4_with_sequence.txt) |sed 's/ /\t/g' >methylation/human/G4_tables/${alias}_seq_combined.txt; 
 done
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ALIGNMENT OF SATELLITE COPIES 
+
+intersectBed -wo -a methylation/human/repeats_of_interest.bed -b methylation/human/overlap/G4s_in_roi.bed |grep LSAU |grep -v COMP |awk '($1=="chr1"){print}' |cut -f1,2,3 |uniq |bedtools getfasta -fi new_sequence/human_pri/t2t.chr1.fa -bed - >methylation/human/test.chr1.LSAU.fasta

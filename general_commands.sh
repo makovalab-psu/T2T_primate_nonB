@@ -1,10 +1,14 @@
+################################################################################
 # CODE FOR THE PAPER 
 # Non-canonical DNA in human and other ape telomere-to-telomere genomes
 # https://www.biorxiv.org/content/10.1101/2024.09.02.610891v1
+# Written by Linnéa Smeds Aug-Sept 2024
 
-# Non-B annotation can be downloaded from:
-
-
+# Non-B annotation in bb format can be found here:
+# Human
+# https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/browser/CHM13/bbi/nonB_*.bb
+# Other apes:
+# https://genomeark.s3.amazonaws.com/species/*/*/assembly_curated/repeats/*_v2.*.nonB_*.bb
 
 
 # CONTENTS 
@@ -16,6 +20,7 @@
 
 # Software used:
 # bedtools v2.31.0
+# samtools v1.19.2
 # meryl v1.4.1
 # Winnowmap v2.03
 # Bedops v2.4.41
@@ -30,7 +35,7 @@ nb_path=/path/to/nonB/tracks/converted/to/bed
 mkdir nonB_annotation 
 
 # Primary haplotype assembly 
-cat T2T_primate_nonB/helpfiles/primary_species_list.txt |grep -v "chimp" | while read -r trivial latin filename;
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt |grep -v "chimp" | while read -r trivial latin filename;
 do
     echo "Creating directory for $trivial.."
     mkdir -p nonB_annotation/${trivial}_pri
@@ -99,7 +104,7 @@ done
 
 # First make a file with the totals (use primary assembly, skip random chr)
 rm -f T2T_primate_nonB/helpfiles/condensed_lengths.txt
-cat T2T_primate_nonB/helpfiles/primary_species_list.txt | while read -r trivial latin filename;
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r trivial latin filename;
 do
   echo "Check lengths for $trivial"
   a=`grep -v "random" ref/$filename.fai |grep -v "chrX" |grep -v "chrY" |cut -f2 |awk '{sum+=$1}END{print sum}'`
@@ -115,7 +120,7 @@ for chr in "autosomes" "chrX" "chrY"
 do
   echo "================= $chr =================="
   echo "species ====APR=== ===DR=== ===GQ=== ===IR=== ===MR=== ===STR=== ===Z-DNA=== === all ==="
-  cat T2T_primate_nonB/helpfiles/primary_species_list.txt | while read -r trivial latin filename;
+  cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r trivial latin filename;
   do
     out=""
     for nb in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
@@ -131,7 +136,7 @@ do
 done
 
 # Detailed per chromosome statistics for each species
-cat T2T_primate_nonB/helpfiles/primary_species_list.txt |grep "chimp" | while read -r trivial latin filename;
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt |grep "chimp" | while read -r trivial latin filename;
 do
   echo "================== $trivial ========================"
   echo "Chrom ====APR=== ===DR=== ===GQ=== ===IR=== ===MR=== ===STR=== ===Z-DNA=== === all ==="
@@ -217,87 +222,5 @@ done
 
 # Plot with
 scripts/R/plot_fig2_upset.R
-
-
-
-################### ENRICHMENT OF NON-B DNA IN NEW SEQUENCE ####################
-# This code was also used for the pig primates autosome paper (Yoo et al 2024) 
-# Code adapted from Bob Harris (from Makova et al. Nature 2024)
-
-# Old and new assemblies divided into separate files for each chromosomes,
-# named after the new chromosome number, example: "chimp/old.chr2.fa" 
-
-# Run meryl and winnowmap 
-for sp in "bonobo" "gorilla" "chimp" "sorang" "human"
-do
- for i in {1..23} "X" "Y" 
- do
-   job=$(echo '#!/bin/bash
-   ~/software/meryl-1.4.1/bin/meryl count k=19 output '$sp'/old.chr'$i'.meryldb '$sp'/old.chr'$i'.fa
-   ~/software/meryl-1.4.1/bin/meryl print greater-than distinct=0.9998 '$sp'/old.chr'$i'.meryldb > '$sp'/old.chr'$i'.repeats
-   ' | sbatch -J meryl.$sp.chr$i --ntasks=1 --cpus-per-task=1 --time=05:00 --partition=open |cut -f4 -d" ")
-     job2=$(echo '#!/bin/bash
-   ~/software/Winnowmap/bin/winnowmap -x asm20 -c --eqx -t 4 -W '$sp'/old.chr'$i'.repeats '$sp'/old.chr'$i'.fa '$sp'/t2t.chr'$i'.fa >'$sp'/chr'$i'.winnowmap.paf
-   ' | sbatch -J winnowmap.$sp.chr$i --ntasks=1 --cpus-per-task=4 --time=5:00:00 --partition=open -d afterany:$job|cut -f4 -d" ")
- done
-done
-
-# I AM HERE 
-
-
-# Fasta files were taken from Edmundo (Copied from Brubeck) and Bob Harris' code
-# for winnomap was used for the alignment.
-# Noted that there were very little unaligned for human chr X, but way too much
-# for chr Y (three times more than the length difference between the assemblies)
-# so I should discuss this with Kateryna.
-
-# Count 'new' basepairs:
-cd /storage/group/kdm16/default/lbs5874/new_vs_old_alignments
-cat human/merged_unaliged.bed |awk '{sum+=$3-$2}END{print sum}'
-# 88569799
-cat human/chrX.unaligned.bed |awk '{sum+=$3-$2}END{print sum}'
-# 136783
-cat human/chrY.unaligned.bed |awk '{sum+=$3-$2}END{print sum}'
-# 15097642
-
-# Make a table that can be used for statistic tests
-# Take the content from the summary files on Roar and place them in
-ls new_sequence/summary_human_*.txt
-# Then extract the numbers for each type
-echo "Chr nonB Region bp_outside_nonB bp_inside_nonB" | sed 's/ /\t/' >new_sequence/human_stat_table.tsv
-for chr in "autosomes" "chrX" "chrY"
-do
-   awk -v c=$chr '(NR>1){out_new=$2-$3; out_old=$5-$6; print c,$1,"New",out_new,$3,"\n",c,$1,"Old",out_old,$6}' new_sequence/summary_human_${chr}.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/human_stat_table.tsv
-done
-
-# With fractions
-echo "Chr nonB Region bp_outside_nonB bp_inside_nonB" | sed 's/ /\t/' >new_sequence/human_stat_table_fractions.tsv
-for chr in "autosomes" "chrX" "chrY"
-do
-   awk -v c=$chr '(NR>1){out_new=($2-$3)/$2; in_new=$3/$2; out_old=($5-$6)/$5; in_old=$6/$5; print c,$1,"New",out_new,in_new,"\n",c,$1,"Old",out_old,in_old}' new_sequence/summary_human_${chr}.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/human_stat_table_fractions.tsv
-done
-
-# More species
-# First make the summary files
-cat species_list.txt |grep -v "siamang" |grep -v "human" |while read -r trivial latin filename;
-do
-  for chr in "autosomes" "chrX" "chrY"
-  do
-    touch new_sequence/summary_${trivial}_${chr}.txt
-  done
-done
-
-# Maybe a Mann Whitney U test is better than a goodness of fit/chisquare test,
-# for that I need densities instead, for ALL species
-echo "Species Chr nonB Region density" | sed 's/ /\t/' >new_sequence/5sp_stat_table_densities.tsv
-cat species_list.txt |grep -v "siamang" |grep -v "borang" |while read -r trivial latin filename;
-do
-  for chr in "autosomes" "chrX" "chrY"
-  do
-     awk -v c=$chr  -v sp=$trivial '(NR>1){print sp,c,$1,"New",$4,"\n",sp,c,$1,"Old",$7}' new_sequence/summary_${trivial}_${chr}.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/5sp_stat_table_densities.tsv
-  done
-done
-
-
 
 
