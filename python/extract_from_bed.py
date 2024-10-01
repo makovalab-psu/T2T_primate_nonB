@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 ################################################################################
-# repeat_summary.py
+# extract_from_bed.py
 # Author: Linnea Smeds
 # Date: 27-August-2024
 # Description: Takes a bed file and a list of names or regions, and only returns

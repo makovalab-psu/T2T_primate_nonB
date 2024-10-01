@@ -1,15 +1,15 @@
-Retroposon/SVA
-rRNA
-Satellite/acro_ACRO1
-Satellite/centr_GSAT
-Satellite/centr_GSATII
-Satellite/centr_GSATX
-Satellite/centr_SST1
-Satellite/subtelo_TAR1
-Satellite_COMP-subunit_LSAU-BSAT_rnd-1_family-1
-Satellite_COMP-subunit_LSAU-BSAT_rnd-1_family-4
-Satellite_COMP-subunit_LSAU-BSAT_rnd-6_family-5403
-Satellite_HSAT5
-Satellite_LSAU
-Satellite_MSR1
-Satellite_SAT-VAR_rnd-6_family-3554
+Retroposon/SVA	SVA
+rRNA	rRNA
+Satellite/acro_ACRO1	ACRO1
+Satellite/centr_GSAT	GSAT
+Satellite/centr_GSATII	GSATII
+Satellite/centr_GSATX	GSATX
+Satellite/centr_SST1	SST1
+Satellite/subtelo_TAR1	TAR1
+Satellite_COMP-subunit_LSAU-BSAT_rnd-1_family-1	COMP-subunit_LSAU-BSAT-1
+Satellite_COMP-subunit_LSAU-BSAT_rnd-1_family-4	COMP-subunit_LSAU-BSAT-4
+Satellite_COMP-subunit_LSAU-BSAT_rnd-6_family-5403	COMP-subunit_LSAU-BSAT-5403
+Satellite_HSAT5	HSAT5
+Satellite_LSAU	LSAU
+Satellite_MSR1	MSR1
+Satellite_SAT-VAR_rnd-6_family-3554	SAT-VAR

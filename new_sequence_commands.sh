@@ -123,7 +123,8 @@ awk '{if(/>/){print $1}else{print}}' ref/assemblies/old_versions/GCA_015021865.1
 awk '{if(/>/){print $1}else{print}}' ref/assemblies/old_versions/GCA_015021835.1_ponAbe.msY.makovalab.ver3_genomic.fna >new_sequence/sorang_pri/old.chrY.fa 
 
 
-# Run meryl and winnowmap 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ALIGN SEQUENCE: Run meryl and winnowmap 
 for sp in "human" "chimp" "bonobo" "gorilla" "sorang"  
 do
   for i in {1..23} "X" "Y" 
@@ -167,16 +168,7 @@ do
   done
 done
 
-# Count 'new' (=unaligned) basepairs for human:
-# Autosomes 
-grep -v chrX new_sequence/human_pri/merged_unaligned.bed |grep -v chrY |awk '{sum+=$3-$2}END{print sum}'
-# 88575866
-grep chrX new_sequence/human_pri/merged_unaligned.bed |awk '{sum+=$3-$2}END{print sum}'
-# 136784
-grep chrY new_sequence/human_pri/merged_unaligned.bed |awk '{sum+=$3-$2}END{print sum}'
-# 15105017
-
-# Separate merged file into autosomes and sex chromosomes
+# Separate merged bed files into autosomes and sex chromosomes
 # (to simplify downstream analysis) 
 for type in "pri" "alt" 
 do 
@@ -188,6 +180,19 @@ do
     grep chrY new_sequence/${sp}_$type/merged_unaligned.bed >new_sequence/${sp}_$type/chrY.unaligned.bed 
   done 
 done 
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# DENSITY AND STATS CALCULATIONS
+
+# Count 'new' (=unaligned) basepairs for human:
+# Autosomes 
+grep -v chrX new_sequence/human_pri/merged_unaligned.bed |grep -v chrY |awk '{sum+=$3-$2}END{print sum}'
+# 88575866
+grep chrX new_sequence/human_pri/merged_unaligned.bed |awk '{sum+=$3-$2}END{print sum}'
+# 136784
+grep chrY new_sequence/human_pri/merged_unaligned.bed |awk '{sum+=$3-$2}END{print sum}'
+# 15105017
 
 # Calculate non-B density inside and outside new sequence
 for type in "pri" "alt" 
