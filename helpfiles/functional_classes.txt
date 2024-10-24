@@ -1,0 +1,14 @@
+CDS_ProtCode	cds_protCode_singleTrans.bed
+CpG_Islands	chrG_cpgislands.bed
+Origin_of_Repl	core_stochastic_origins_chm13v2.0_hglft.ucsc.bed
+Enhancers	enhancer_protCode_singleTrans.bed
+Exons_ProtCode	exon_protCode_singleTrans.bed
+Gene_NonProtCode	gene_nonprotCode.bed
+Gene_ProtCode	gene_protCode_singleTrans.bed
+Introns	intron_protCode_singleTrans.bed
+NGNR	ngnr_protCode_singleTrans.bed
+Promoters	promoter_protCode_singleTrans.bed
+Repeats	repeats_protCode_singleTrans.bed
+RNA_ProtCode	rna_protCode_singleTrans.bed
+3UTR	utr3_protCode_singleTrans.bed
+5UTR	utr5_protCode_singleTrans.bed

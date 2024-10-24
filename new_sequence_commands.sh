@@ -1,7 +1,7 @@
 ################### ENRICHMENT OF NON-B DNA IN NEW SEQUENCE ####################
 # written by Linnéa Smeds, September 2024
-# This code was also used for the pig primates autosome paper (Yoo et al 2024) 
-# Code for winnowmap alignments were  adapted from Bob Harris (from Makova et 
+# This code was also used for the primates autosome paper (Yoo et al 2024) 
+# Code for winnowmap alignments was adapted from Bob Harris (from Makova et 
 # al. Nature 2024)
 
 # Old and new assemblies divided into separate files for each chromosomes,
@@ -68,16 +68,16 @@ done
 
 # INHOUSE: Make translation files  
 mkdir T2T_primate_nonB/helpfiles/chr_translation
-for type in "pri" "alt" 
+for hap in "pri" "alt" 
 do 
-    cat T2T_primate_nonB/helpfiles/${type}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
     do 
-        echo "#Chr New Old" |sed 's/ /\t/g' >T2T_primate_nonB/helpfiles/chr_translation/${sp}_${type}.txt
+        echo "#Chr New Old" |sed 's/ /\t/g' >T2T_primate_nonB/helpfiles/chr_translation/${sp}_${hap}.txt
         for chr in $(cut -f1 ref/$filename.fai)
         do 
             echo $chr 
             chr_short=`echo $chr |cut -f1 -d"_"`
-            grep ">" new_sequence/${sp}_${type}/old.$chr_short.fa |sed 's/>//' |awk -v OFS="\t" -v c1=$chr_short -v c2=$chr '{print c1,c2,$0}' >>T2T_primate_nonB/helpfiles/chr_translation/${sp}_${type}.txt
+            grep ">" new_sequence/${sp}_${hap}/old.$chr_short.fa |sed 's/>//' |awk -v OFS="\t" -v c1=$chr_short -v c2=$chr '{print c1,c2,$0}' >>T2T_primate_nonB/helpfiles/chr_translation/${sp}_${hap}.txt
         done 
     done 
 done
@@ -92,24 +92,24 @@ done
 
 
 # Extract fasta sequence 
-for type in "pri" "alt" 
+for hap in "pri" "alt" 
 do 
-    cat T2T_primate_nonB/helpfiles/${type}_species_list.txt |grep "human" |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep "human" |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
     do 
-        mkdir -p new_sequence/${sp}_$type
+        mkdir -p new_sequence/${sp}_$hap
         mkdir -p new_sequence/${sp}_old
         old_ass=`grep $sp T2T_primate_nonB/helpfiles/old_assemblies.txt |cut -f2 -d" "`
         echo $sp $old_ass
         # Go through all chromosome pairs (old might consist of more than one chr)
-        for chr in $(cut -f1 T2T_primate_nonB/helpfiles/chr_translation/${sp}_${type}.txt |grep -v "#" |uniq)
+        for chr in $(cut -f1 T2T_primate_nonB/helpfiles/chr_translation/${sp}_${hap}.txt |grep -v "#" |uniq)
         do 
             echo $chr
             # Get new chromosome
-            awk -v c=$chr '($1==c){print $2}' T2T_primate_nonB/helpfiles/chr_translation/${sp}_${type}.txt |uniq >$sp.$type.temp
-            samtools faidx ref/assemblies/$filename -r $sp.$type.temp -o new_sequence/${sp}_$type/t2t.$chr.fa
+            awk -v c=$chr '($1==c){print $2}' T2T_primate_nonB/helpfiles/chr_translation/${sp}_${hap}.txt |uniq >$sp.$hap.temp
+            samtools faidx ref/assemblies/$filename -r $sp.$hap.temp -o new_sequence/${sp}_$hap/t2t.$chr.fa
             # get old chromosome(s)
-            awk -v c=$chr '($1==c){print $3}' T2T_primate_nonB/helpfiles/chr_translation/${sp}_${type}.txt |uniq >$sp.$type.temp
-            samtools faidx ref/assemblies/old_versions/$old_ass -r $sp.$type.temp -o new_sequence/${sp}_old/old.$chr.fa
+            awk -v c=$chr '($1==c){print $3}' T2T_primate_nonB/helpfiles/chr_translation/${sp}_${hap}.txt |uniq >$sp.$hap.temp
+            samtools faidx ref/assemblies/old_versions/$old_ass -r $sp.$hap.temp -o new_sequence/${sp}_old/old.$chr.fa
         done 
     done 
 done 
@@ -133,11 +133,11 @@ do
     ~/software/meryl-1.4.1/bin/meryl count k=19 output new_sequence/'$sp'_old/old.chr'$i'.meryldb new_sequence/'$sp'_old/old.chr'$i'.fa
     ~/software/meryl-1.4.1/bin/meryl print greater-than distinct=0.9998 new_sequence/'$sp'_old/old.chr'$i'.meryldb > new_sequence/'$sp'_old/old.chr'$i'.repeats
     ' | sbatch -J meryl.$sp.chr$i --ntasks=1 --cpus-per-task=1 --time=05:00 --partition=open |cut -f4 -d" ")
-    for type in "pri" "alt" 
+    for hap in "pri" "alt" 
     do 
       echo '#!/bin/bash
-      ~/software/Winnowmap/bin/winnowmap -x asm20 -c --eqx -t 4 -W new_sequence/'$sp'_old/old.chr'$i'.repeats new_sequence/'$sp'_old/old.chr'$i'.fa new_sequence/'$sp'_'$type'/t2t.chr'$i'.fa >new_sequence/'$sp'_'$type'/chr'$i'.winnowmap.paf
-      ' | sbatch -J $i.$sp.$type.winnowmap --ntasks=1 --cpus-per-task=4 --time=5:00:00 --partition=open -d afterok:$job
+      ~/software/Winnowmap/bin/winnowmap -x asm20 -c --eqx -t 4 -W new_sequence/'$sp'_old/old.chr'$i'.repeats new_sequence/'$sp'_old/old.chr'$i'.fa new_sequence/'$sp'_'$hap'/t2t.chr'$i'.fa >new_sequence/'$sp'_'$hap'/chr'$i'.winnowmap.paf
+      ' | sbatch -J $i.$sp.$hap.winnowmap --ntasks=1 --cpus-per-task=4 --time=5:00:00 --partition=open -d afterok:$job
     done
   done
 done
@@ -148,36 +148,36 @@ done
 
 # Convert to bed
 module load bedtools/2.31.0
-for type in "pri" "alt" 
+for hap in "pri" "alt" 
 do 
-   cat T2T_primate_nonB/helpfiles/${type}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
   do
-    echo "Looking at ${sp}_$type"
-    rm -f new_sequence/${sp}_$type/merged_aligned.bed
+    echo "Looking at ${sp}_$hap"
+    rm -f new_sequence/${sp}_$hap/merged_aligned.bed
     for i in {1..23} "X" "Y" 
     do
-      if [ -e new_sequence/${sp}_$type/chr${i}.winnowmap.paf ]
+      if [ -e new_sequence/${sp}_$hap/chr${i}.winnowmap.paf ]
       then
         echo Looking at chr$i
-        cut -f1,3,4 new_sequence/${sp}_$type/chr${i}.winnowmap.paf |sort -k1,1 -k2,2n |grep -v "random" |mergeBed -i - |awk -v c=$i '{print $1"\t"$2"\t"$3}' >new_sequence/${sp}_$type/chr${i}.aligned.bed
-        cat new_sequence/${sp}_$type/chr${i}.aligned.bed >>new_sequence/${sp}_$type/merged_aligned.bed
+        cut -f1,3,4 new_sequence/${sp}_$hap/chr${i}.winnowmap.paf |sort -k1,1 -k2,2n |grep -v "random" |mergeBed -i - |awk -v c=$i '{print $1"\t"$2"\t"$3}' >new_sequence/${sp}_$hap/chr${i}.aligned.bed
+        cat new_sequence/${sp}_$hap/chr${i}.aligned.bed >>new_sequence/${sp}_$hap/merged_aligned.bed
       fi
     done
     echo "get complement"
-    cut -f1,2 ref/$filename.fai |grep -v "random" |grep -v "chrM" |sort -k1,1 | complementBed -i <(sort -k1,1 -k2,2n new_sequence/${sp}_$type/merged_aligned.bed) -g - >new_sequence/${sp}_$type/merged_unaligned.bed
+    cut -f1,2 ref/$filename.fai |grep -v "random" |grep -v "chrM" |sort -k1,1 | complementBed -i <(sort -k1,1 -k2,2n new_sequence/${sp}_$hap/merged_aligned.bed) -g - >new_sequence/${sp}_$hap/merged_unaligned.bed
   done
 done
 
 # Separate merged bed files into autosomes and sex chromosomes
 # (to simplify downstream analysis) 
-for type in "pri" "alt" 
+for hap in "pri" "alt" 
 do 
-   cat T2T_primate_nonB/helpfiles/${type}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
   do
-    grep -v chrX new_sequence/${sp}_$type/merged_unaligned.bed |grep -v chrY |sort -k1,1 -k2,2n >new_sequence/${sp}_$type/autosomes.unaligned.bed 
-    grep -v chrX new_sequence/${sp}_$type/merged_aligned.bed |grep -v chrY >new_sequence/${sp}_$type/autosomes.aligned.bed 
-    grep chrX new_sequence/${sp}_$type/merged_unaligned.bed >new_sequence/${sp}_$type/chrX.unaligned.bed 
-    grep chrY new_sequence/${sp}_$type/merged_unaligned.bed >new_sequence/${sp}_$type/chrY.unaligned.bed 
+    grep -v chrX new_sequence/${sp}_$hap/merged_unaligned.bed |grep -v chrY |sort -k1,1 -k2,2n >new_sequence/${sp}_$hap/autosomes.unaligned.bed 
+    grep -v chrX new_sequence/${sp}_$hap/merged_aligned.bed |grep -v chrY >new_sequence/${sp}_$hap/autosomes.aligned.bed 
+    grep chrX new_sequence/${sp}_$hap/merged_unaligned.bed >new_sequence/${sp}_$hap/chrX.unaligned.bed 
+    grep chrY new_sequence/${sp}_$hap/merged_unaligned.bed >new_sequence/${sp}_$hap/chrY.unaligned.bed 
   done 
 done 
 
@@ -195,56 +195,120 @@ grep chrY new_sequence/human_pri/merged_unaligned.bed |awk '{sum+=$3-$2}END{prin
 # 15105017
 
 # Calculate non-B density inside and outside new sequence
-for type in "pri" "alt" 
+for hap in "pri" "alt" 
 do 
-   cat T2T_primate_nonB/helpfiles/${type}_species_list.txt |grep -v human |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v human |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
   do
     echo "looking at $sp"
     echo '#!/bin/bash
     module load bedtools/2.31.0
-    echo "#Chr NonB NewTotBp NewNonB NewDens OldTotBp OldNonB OldDens" >new_sequence/'$sp'_'$type'/summary.txt
+    echo "#Chr NonB NewTotBp NewNonB NewDens OldTotBp OldNonB OldDens" >new_sequence/'$sp'_'$hap'/summary.txt
     for chr in "autosomes" "chrX" "chrY"
       do
       for nb in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
       do
-        new=`intersectBed -a new_sequence/'$sp'_'$type'/$chr.unaligned.bed -b nonB_annotation/'$sp'_'$type'/${chr}_${nb}.bed  -wao |cut -f1,2,3,7| awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" |awk -v nb=$nb '"'"'{sum_l+=$3-$2; sum_nb+=$4}END{d=sum_nb/sum_l; print nb,sum_l,sum_nb,d}'"'"'`
-        old=`intersectBed -a new_sequence/'$sp'_'$type'/$chr.aligned.bed -b nonB_annotation/'$sp'_'$type'/${chr}_${nb}.bed -wao |cut -f1,2,3,7| awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" |awk '"'"'{sum_l+=$3-$2; sum_nb+=$4}END{d=sum_nb/sum_l; print sum_l,sum_nb,d}'"'"'`
-        echo $chr" "$new" "$old >>new_sequence/'$sp'_'$type'/summary.txt
+        new=`intersectBed -a new_sequence/'$sp'_'$hap'/$chr.unaligned.bed -b nonB_annotation/'$sp'_'$hap'/${chr}_${nb}.bed  -wao |cut -f1,2,3,7| awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" |awk -v nb=$nb '"'"'{sum_l+=$3-$2; sum_nb+=$4}END{d=sum_nb/sum_l; print nb,sum_l,sum_nb,d}'"'"'`
+        old=`intersectBed -a new_sequence/'$sp'_'$hap'/$chr.aligned.bed -b nonB_annotation/'$sp'_'$hap'/${chr}_${nb}.bed -wao |cut -f1,2,3,7| awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" |awk '"'"'{sum_l+=$3-$2; sum_nb+=$4}END{d=sum_nb/sum_l; print sum_l,sum_nb,d}'"'"'`
+        echo $chr" "$new" "$old >>new_sequence/'$sp'_'$hap'/summary.txt
       done 
     done
-     ' |sbatch -J $type.$sp --ntasks=1 --cpus-per-task=4 --time=1:00:00 --partition=open
+     ' |sbatch -J $hap.$sp --ntasks=1 --cpus-per-task=1 --time=1:00:00 --partition=open
   done 
 done
 
-
 # Make a table with base pairs in and outside for statistic tests
-for type in "pri" "alt" 
+for hap in "pri" "alt" 
 do 
-   cat T2T_primate_nonB/helpfiles/${type}_species_list.txt |grep -v human |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v human |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
   do
-    echo "Chr nonB Region bp_outside_nonB bp_inside_nonB" | sed 's/ /\t/' >new_sequence/${sp}_$type/stat_table.tsv
-    awk '(NR>1){out_new=$3-$4; out_old=$6-$7; print $1,$2,"New",out_new,$4,"\n",$1,$2,"Old",out_old,$7}' new_sequence/${sp}_$type/summary.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/${sp}_$type/stat_table.tsv
+    echo "Chr nonB Region bp_outside_nonB bp_inside_nonB" | sed 's/ /\t/' >new_sequence/${sp}_$hap/stat_table.tsv
+    awk '(NR>1){out_new=$3-$4; out_old=$6-$7; print $1,$2,"New",out_new,$4,"\n",$1,$2,"Old",out_old,$7}' new_sequence/${sp}_$hap/summary.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/${sp}_$hap/stat_table.tsv
   done 
 done 
 
-# INHOUSE - NOT SURE THIS IS USED FOR THE PAPER 
-# With fractions 
-for type in "pri" "alt" 
+# Subsample the "new and old" (take ~half the regions from each file?) and recalculate statistics 
+for hap in "alt" #"pri" #"alt" 
 do 
-   cat T2T_primate_nonB/helpfiles/${type}_species_list.txt |grep -v human |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v human |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
   do
-    echo "Chr nonB Region bp_outside_nonB bp_inside_nonB" | sed 's/ /\t/' >new_sequence/${sp}_$type/stat_table_fractions.tsv
-    awk '(NR>1 && NF==8){out_new=($3-$4)/$3; in_new=$4/$3; out_old=($6-$7)/$6; in_old=$7/$6; print $1,$2,"New",out_new,in_new,"\n",$1,$2,"Old",out_old,in_old}' new_sequence/${sp}_$type/summary.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/${sp}_$type/stat_table_fractions.tsv
+    echo "looking at $sp, $hap"
+    for chr in  "chrX" "chrY" #"autosomes"
+    do
+      unum=`awk '{}END{num=int(NR/2); print num}' new_sequence/${sp}_${hap}/$chr.unaligned.bed`
+      anum=`awk '{}END{num=int(NR/2); print num}' new_sequence/${sp}_${hap}/$chr.aligned.bed`
+      # Subsample half the sequences 10 times 
+      for i in {1..10}
+      do
+        shuf -n $unum new_sequence/${sp}_${hap}/$chr.unaligned.bed |sort -k1,1 -k2,2n >new_sequence/${sp}_${hap}/resample.$i.$chr.unaligned.bed
+        shuf -n $anum new_sequence/${sp}_${hap}/$chr.aligned.bed |sort -k1,1 -k2,2n >new_sequence/${sp}_${hap}/resample.$i.$chr.aligned.bed 
+      done
+    done
+  done 
+done 
+
+# Calculate enrichment for each of these 
+for hap in "pri" "alt" 
+do 
+  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v human |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+  do
+    for i in {1..10}
+    do 
+      echo '#!/bin/bash
+      module load bedtools/2.31.0
+      echo "#Chr NonB NewTotBp NewNonB NewDens OldTotBp OldNonB OldDens" >new_sequence/'$sp'_'$hap'/resample.'$i'.summary.txt
+      for chr in "autosomes" "chrX" "chrY"
+      do
+        for nb in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
+        do
+          new=`intersectBed -a new_sequence/'$sp'_'$hap'/resample.'$i'.$chr.unaligned.bed -b nonB_annotation/'$sp'_'$hap'/${chr}_${nb}.bed  -wao |cut -f1,2,3,7| awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" |awk -v nb=$nb '"'"'{sum_l+=$3-$2; sum_nb+=$4}END{d=sum_nb/sum_l; print nb,sum_l,sum_nb,d}'"'"'`
+          old=`intersectBed -a new_sequence/'$sp'_'$hap'/resample.'$i'.$chr.aligned.bed -b nonB_annotation/'$sp'_'$hap'/${chr}_${nb}.bed -wao |cut -f1,2,3,7| awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" |awk '"'"'{sum_l+=$3-$2; sum_nb+=$4}END{d=sum_nb/sum_l; print sum_l,sum_nb,d}'"'"'`
+          echo $chr" "$new" "$old >>new_sequence/'$sp'_'$hap'/resample.'$i'.summary.txt
+        done 
+      done 
+      ' |sbatch -J $hap.$sp --ntasks=1 --cpus-per-task=1 --time=1:00:00 --partition=open
+    done
+  done 
+done
+
+# Table with base pairs from the subsampled regions for the statistics test 
+for hap in "pri" #"alt" 
+do 
+   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep human |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+  do
+    echo "Resample Chr nonB Region bp_outside_nonB bp_inside_nonB" | sed 's/ /\t/' >new_sequence/${sp}_$hap/resample.stat_table.tsv
+    for i in {1..10}
+    do 
+      awk -v i=$i '(NR>1){out_new=$3-$4; out_old=$6-$7; print i,$1,$2,"New",out_new,$4,"\n",i,$1,$2,"Old",out_old,$7}' new_sequence/${sp}_$hap/resample.$i.summary.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/${sp}_$hap/resample.stat_table.tsv
+    done
+  done 
+done 
+
+# Stats for Table 1 is calculated in R, using the script    
+# T2T_primate_nonB/R/chisquare_test_for_enrichment.R
+   
+
+
+
+
+
+# INHOUSE - NOT USED  
+# With fractions 
+for hap in "pri" "alt" 
+do 
+   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v human |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+  do
+    echo "Chr nonB Region bp_outside_nonB bp_inside_nonB" | sed 's/ /\t/' >new_sequence/${sp}_$hap/stat_table_fractions.tsv
+    awk '(NR>1 && NF==8){out_new=($3-$4)/$3; in_new=$4/$3; out_old=($6-$7)/$6; in_old=$7/$6; print $1,$2,"New",out_new,in_new,"\n",$1,$2,"Old",out_old,in_old}' new_sequence/${sp}_$hap/summary.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/${sp}_$hap/stat_table_fractions.tsv
   done
 done 
 
 # Numbers for Mann Whitney U test, all species together
 echo "Species Chr nonB Region Density" | sed 's/ /\t/' >new_sequence/5sp_stat_table_densities.tsv
-for type in "pri" "alt" 
+for hap in "pri" "alt" 
 do 
-   cat T2T_primate_nonB/helpfiles/${type}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
   do
-     awk -v sp=${sp}_$type '(NR>1 && NF==8){print sp,$1,$2,"New",$5,"\n",sp,$1,$2,"Old",$8}' new_sequence/${sp}_$type/summary.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/5sp_stat_table_densities.tsv
+     awk -v sp=${sp}_$hap '(NR>1 && NF==8){print sp,$1,$2,"New",$5,"\n",sp,$1,$2,"Old",$8}' new_sequence/${sp}_$hap/summary.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/5sp_stat_table_densities.tsv
   done
 done
 

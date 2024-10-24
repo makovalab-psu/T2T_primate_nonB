@@ -19,9 +19,9 @@ cd ../..
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # # Make directories for all species
-cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r trivial latin filename;
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r sp latin filename;
 do
-  mkdir -p repeats/$trivial
+  mkdir -p repeats/$sp
 done
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -47,91 +47,91 @@ awk -v OFS="\t" '{if(/Satellite/){name=$11"_"$10}else{name=$11}; s=$6-1; print $
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Merge repeats with non-B DNA
-cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r trivial latin filename;
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r sp latin filename;
 do
-  mkdir -p repeats/$trivial/overlap
+  mkdir -p repeats/$sp/overlap
   for chr in "autosomes" "chrX" "chrY"
   do
     echo '#!/bin/bash
     module load bedtools/2.31.0
     for non_b in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
     do
-        intersectBed -a repeats/'$trivial'/RepeatMasker.bed -b nonB_annotation/'${trivial}'_pri/'${chr}'_${non_b}.bed >repeats/'$trivial'/overlap/'${chr}'_${non_b}_repmask.bed
-        if [[ "'$trivial'" == "human" ]]
+        intersectBed -a repeats/'$sp'/RepeatMasker.bed -b nonB_annotation/'${sp}'_pri/'${chr}'_${non_b}.bed >repeats/'$sp'/overlap/'${chr}'_${non_b}_repmask.bed
+        if [[ "'$sp'" == "human" ]]
         then
-          echo "only for '$trivial'"
-          intersectBed -a repeats/'$trivial'/new_satellites.bed -b nonB_annotation/'${trivial}'_pri/'${chr}'_${non_b}.bed >repeats/'$trivial'/overlap/'${chr}'_${non_b}_newsat.bed
-          intersectBed -a repeats/'$trivial'/composite_repeats.bed -b nonB_annotation/'${trivial}'_pri/'${chr}'_${non_b}.bed >repeats/'$trivial'/overlap/'${chr}'_${non_b}_compos.bed
+          echo "only for '$sp'"
+          intersectBed -a repeats/'$sp'/new_satellites.bed -b nonB_annotation/'${sp}'_pri/'${chr}'_${non_b}.bed >repeats/'$sp'/overlap/'${chr}'_${non_b}_newsat.bed
+          intersectBed -a repeats/'$sp'/composite_repeats.bed -b nonB_annotation/'${sp}'_pri/'${chr}'_${non_b}.bed >repeats/'$sp'/overlap/'${chr}'_${non_b}_compos.bed
         fi
     done
-    '| sbatch -J $chr.$trivial --ntasks=1 --cpus-per-task=1 --time=1:00:00 --partition=open
+    '| sbatch -J $chr.$sp --ntasks=1 --cpus-per-task=1 --time=1:00:00 --partition=open
   done
 done
 
 # AND FULL GENOME COMBINED!
-cat T2T_primate_nonB/helpfiles/pri_species_list.txt |grep "gorilla" |while read -r trivial latin filename;
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt |grep "gorilla" |while read -r sp latin filename;
 do
-  mkdir -p repeats/$trivial/overlap
+  mkdir -p repeats/$sp/overlap
   echo '#!/bin/bash
   module load bedtools/2.31.0
   for non_b in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
   do
-      intersectBed -a repeats/'$trivial'/RepeatMasker.bed -b <(cat nonB_annotation/'${trivial}'_pri/autosomes_${non_b}.bed nonB_annotation/'${trivial}'_pri/chrX_${non_b}.bed nonB_annotation/'${trivial}'_pri/chrY_${non_b}.bed) >repeats/'${trivial}'/overlap/genome_${non_b}_repmask.bed
-      if [[ "'$trivial'" == "human" ]]
+      intersectBed -a repeats/'$sp'/RepeatMasker.bed -b <(cat nonB_annotation/'${sp}'_pri/autosomes_${non_b}.bed nonB_annotation/'${sp}'_pri/chrX_${non_b}.bed nonB_annotation/'${sp}'_pri/chrY_${non_b}.bed) >repeats/'${sp}'/overlap/genome_${non_b}_repmask.bed
+      if [[ "'$sp'" == "human" ]]
       then
-        echo "only for '$trivial'"
-        intersectBed -a repeats/'$trivial'/new_satellites.bed -b <(cat nonB_annotation/'${trivial}'_pri/autosomes_${non_b}.bed nonB_annotation/'${trivial}'_pri/chrX_${non_b}.bed nonB_annotation/'${trivial}'_pri/chrY_${non_b}.bed) >repeats/'$trivial'/overlap/genome_${non_b}_newsat.bed
-        intersectBed -a repeats/'$trivial'/composite_repeats.bed -b <(cat nonB_annotation/'${trivial}'_pri/autosomes_${non_b}.bed nonB_annotation/'${trivial}'_pri/chrX_${non_b}.bed nonB_annotation/'${trivial}'_pri/chrY_${non_b}.bed) >repeats'/$trivial'/overlap/genome_${non_b}_compos.bed
+        echo "only for '$sp'"
+        intersectBed -a repeats/'$sp'/new_satellites.bed -b <(cat nonB_annotation/'${sp}'_pri/autosomes_${non_b}.bed nonB_annotation/'${sp}'_pri/chrX_${non_b}.bed nonB_annotation/'${sp}'_pri/chrY_${non_b}.bed) >repeats/'$sp'/overlap/genome_${non_b}_newsat.bed
+        intersectBed -a repeats/'$sp'/composite_repeats.bed -b <(cat nonB_annotation/'${sp}'_pri/autosomes_${non_b}.bed nonB_annotation/'${sp}'_pri/chrX_${non_b}.bed nonB_annotation/'${sp}'_pri/chrY_${non_b}.bed) >repeats'/$sp'/overlap/genome_${non_b}_compos.bed
       fi
   done
-  '| sbatch -J $chr.$trivial --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8G --time=1:00:00 --partition=open
+  '| sbatch -J $chr.$sp --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8G --time=1:00:00 --partition=open
 done
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Make a list with all repeat types and their total lengths for each chr type
 module load python/3.11.2
-cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r trivial latin filename;
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r sp latin filename;
 do
-  grep "chrX" repeats/$trivial/RepeatMasker.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$trivial/chrX.repeat_lengths.txt
-  grep "chrY" repeats/$trivial/RepeatMasker.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$trivial/chrY.repeat_lengths.txt
-  grep -v "chrX" repeats/$trivial/RepeatMasker.bed|grep -v "chrY" |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$trivial/autosomes.repeat_lengths.txt
-  cat repeats/$trivial/RepeatMasker.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$trivial/genome_repeat_lengths.txt
+  grep "chrX" repeats/$sp/RepeatMasker.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/chrX.repeat_lengths.txt
+  grep "chrY" repeats/$sp/RepeatMasker.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/chrY.repeat_lengths.txt
+  grep -v "chrX" repeats/$sp/RepeatMasker.bed|grep -v "chrY" |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/autosomes.repeat_lengths.txt
+  cat repeats/$sp/RepeatMasker.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/genome_repeat_lengths.txt
 done
 
 # And for human satellites/composite
-trivial="human"
-grep "chrX" repeats/$trivial/composite_repeats.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$trivial/chrX.compos_lengths.txt
-grep "chrY" repeats/$trivial/composite_repeats.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$trivial/chrY.compos_lengths.txt
-grep -v "chrX" repeats/$trivial/composite_repeats.bed|grep -v "chrY" |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$trivial/autosomes.compos_lengths.txt
-cat repeats/$trivial/composite_repeats.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$trivial/genome_compos_lengths.txt
-grep "chrX" repeats/$trivial/new_satellites.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$trivial/chrX.newsat_lengths.txt
-grep "chrY" repeats/$trivial/new_satellites.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$trivial/chrY.newsat_lengths.txt
-grep -v "chrX" repeats/$trivial/new_satellites.bed|grep -v "chrY" |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$trivial/autosomes.newsat_lengths.txt
-cat repeats/$trivial/new_satellites.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$trivial/genome_newsat_lengths.txt
+sp="human"
+grep "chrX" repeats/$sp/composite_repeats.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/chrX.compos_lengths.txt
+grep "chrY" repeats/$sp/composite_repeats.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/chrY.compos_lengths.txt
+grep -v "chrX" repeats/$sp/composite_repeats.bed|grep -v "chrY" |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/autosomes.compos_lengths.txt
+cat repeats/$sp/composite_repeats.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/genome_compos_lengths.txt
+grep "chrX" repeats/$sp/new_satellites.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/chrX.newsat_lengths.txt
+grep "chrY" repeats/$sp/new_satellites.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/chrY.newsat_lengths.txt
+grep -v "chrX" repeats/$sp/new_satellites.bed|grep -v "chrY" |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/autosomes.newsat_lengths.txt
+cat repeats/$sp/new_satellites.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/genome_newsat_lengths.txt
 
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Summarize the enrichment of each non-B motif in all repeat classes
 # (Print NA if there are no such repeats in the genome)
-cat T2T_primate_nonB/helpfiles/pri_species_list.txt  |grep "human" |while read -r trivial latin filename;
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt  |grep "human" |while read -r sp latin filename;
 do
   for chr in  "autosomes" "chrX" "chrY" 
   do
-    echo "Repeat APR DR GQ IR MR STR Z" |sed 's/ /\t/g' >repeats/${trivial}_${chr}_repeat_enrichment.tsv
-    cat repeats/$trivial/${chr}.repeat_lengths.txt | while read -r rep replen;
+    echo "Repeat APR DR GQ IR MR STR Z" |sed 's/ /\t/g' >repeats/${sp}_${chr}_repeat_enrichment.tsv
+    cat repeats/$sp/${chr}.repeat_lengths.txt | while read -r rep replen;
     do
       #repname=`echo $rep |sed 's/\//_/g'`
       tmp=`echo $rep`
       #Go through non-B
-      cat densities/${trivial}_pri_nonB_genome_wide.txt |grep -v "all" | while read -r non_b tot dens;
+      cat densities/${sp}_pri_nonB_genome_wide.txt |grep -v "all" | while read -r non_b tot dens;
       do
-        d=`cat repeats/$trivial/overlap/${chr}_${non_b}_repmask.bed | awk -v r=$rep -v l=$replen -v dtot=$dens '($4==r){sum+=$3-$2}END{if(l==0 || dtot==0){print "NA"} else{d=sum/l; frac=d/dtot; print frac}}'`
+        d=`cat repeats/$sp/overlap/${chr}_${non_b}_repmask.bed | awk -v r=$rep -v l=$replen -v dtot=$dens '($4==r){sum+=$3-$2}END{if(l==0 || dtot==0){print "NA"} else{d=sum/l; frac=d/dtot; print frac}}'`
         tmp=`echo $tmp" "$d`
         echo $tmp >tmp
       done
-      cat tmp |sed 's/ /\t/g' >>repeats/${trivial}_${chr}_repeat_enrichment.tsv
+      cat tmp |sed 's/ /\t/g' >>repeats/${sp}_${chr}_repeat_enrichment.tsv
     done
   done
 done
