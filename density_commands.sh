@@ -5,9 +5,9 @@
 
 # Create genomic windows and make length file
 module load bedtools/2.31.0
-#mkdir -p ref/windows
+mkdir -p ref/windows
 #rm -f T2T_primate_nonB/helpfiles/all_lengths.txt
-for hap in  "alt" #"pri"
+for hap in  "alt" "pri"
 do
   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep siamang |while read -r sp latin filename;
   do
@@ -22,7 +22,7 @@ done
 
 # Try longer windows for testing correlations 
 module load bedtools/2.31.0
-for hap in "pri" #"alt" 
+for hap in "pri" "alt" 
 do
   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep human |while read -r sp latin filename;
   do
@@ -88,21 +88,17 @@ do
   done
 done 
 
-# Plot primary haplotypes with 
-Rscript T2T_primate_nonB/R/plot_fig3_density_merged.R
-# And secondary haploype with
-Rscript T2T_primate_nonB/R/plot_figSX_density_alt_merged.R
-
+# Plot haplotypes with circos, see circos_commands.sh an example code in circos/
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Calculate GC content per window 
 
 module load bedtools/2.31.0
-for hap in "pri" #"alt" 
+for hap in "pri" "alt" 
 do
   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep "human" |while read -r sp latin filename;
   do
-    #bedtools nuc -fi ref/assemblies/$filename -bed ref/windows/${sp}_$hap/all_100k_windows.bed >ref/windows/${sp}_$hap/all_100k_windows.withGC.bed
+    bedtools nuc -fi ref/assemblies/$filename -bed ref/windows/${sp}_$hap/all_100k_windows.bed >ref/windows/${sp}_$hap/all_100k_windows.withGC.bed
     bedtools nuc -fi ref/assemblies/$filename -bed ref/windows/${sp}_$hap/all_1Mb_windows.bed >ref/windows/${sp}_$hap/all_1Mb_windows.withGC.bed
     bedtools nuc -fi ref/assemblies/$filename -bed ref/windows/${sp}_$hap/all_5Mb_windows.bed >ref/windows/${sp}_$hap/all_5Mb_windows.withGC.bed
   done 
@@ -113,7 +109,7 @@ done
 # again, I just intersect the 1Mb window file with the 100kb window file and 
 # sum up the nonB count for each window 
 
-for hap in "pri" #"alt" 
+for hap in "pri" "alt" 
 do
   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep "human" |while read -r sp latin filename;
   do
@@ -128,7 +124,6 @@ do
     done 
   done 
 done 
-
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -179,6 +174,7 @@ done
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # GC Corrected 'densities' (Divide by GC-bp instead of full length)
+# THIS PART WAS NOT USED FOR THE FINAL PAPER. 
 
 # Find GC and AT of full genomes 
 for hap in "pri" "alt" #
