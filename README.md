@@ -6,18 +6,40 @@ Correspondence to Kateryna Makova (kdm16@psu.edu)
 
 ***
 
-## THIS PAGE IS STILL UNDER CONSTRUCTION
+## *THIS PAGE IS STILL UNDER CONSTRUCTION*
 
-### This repository will contain all code generated for the above paper.
+### This repository includes the following files and directories:
 
-General unix terminal commands and descriptions are found in **general_commands.sh**   
-Commands for calculating non-B DNA motif density are found in **density_commands.sh**
-Analysis of new sequence vs. old sequence is found in **new_sequence_commands.sh**
-Commands for enrichment analysis in repeats and satellite anlysis are found in **repeat_commands.sh**
-Commands for analysis of functional regions are found in **functional_commands.sh**
-Commands for methylation of analysis of certain repeats and satellites are found in **methylation_commands.sh**
-Analysis of centromeres, including centromeric satellites, CENP-B and SF analysis are found in **centromere_commands.sh**
-Scripts for generating input files for circos plots are found in **circos_commands.sh** 
-Examples of circos scripts (including configuration files, but excluding nonB data files) are found in **circos/**
-In-house python scripts are found in **python/**  
-R scripts to generate figures and statistics are found in **R/** 
+#### **general_commands.sh**
+Includes a list of software, commands for creating the bed files, generate statistics and find overlaps between the motif types. 
+
+#### **density_commands.sh**
+Commands for calculating non-B DNA motif density and GC content in 1-00kb windows.
+
+#### **new_sequence_commands.sh**
+Analysis of new sequence in the T2T assemblies vs. old sequence (non T2T genomes), including scripts to align new vs old. 
+
+#### **repeat_commands.sh**
+Commands for enrichment analysis in repeats (including paths to repeat annotations). Also contains the detailed analysis of the satellites Walusat, LSAU and SST1. 
+
+#### **functional_commands.sh**
+Commands for analysis of functional regions.
+
+#### **methylation_commands.sh**
+Commands for methylation analysis of certain repeats and satellites.
+
+#### **centromere_commands.sh**
+Analysis of centromeres, including centromeric satellites, CENP-B and SF analysis.
+
+#### **circos_commands.sh**
+Scripts for generating input files for circos plots.
+
+#### **circos/**
+Examples of circos scripts (including configuration files, but excluding nonB data files) are found in 
+
+#### **python/**
+All in-house python scripts used in the study. 
+
+#### **R/**
+All R scripts to generate figures and statistics.
+
