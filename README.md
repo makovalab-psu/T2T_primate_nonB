@@ -35,7 +35,7 @@ Analysis of centromeres, including centromeric satellites, CENP-B and SF analysi
 Scripts for generating input files for circos plots.
 
 #### **circos/**
-Examples of circos scripts (including configuration files, but excluding nonB data files) are found in 
+Examples of circos scripts for human (including all configuration files and nonB data files).
 
 #### **python/**
 All in-house python scripts used in the study. 
