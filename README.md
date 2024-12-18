@@ -14,10 +14,10 @@ Correspondence to Kateryna Makova (kdm16@psu.edu)
 Includes a list of software, commands for creating the bed files, generate statistics and find overlaps between the motif types. 
 
 #### **density_commands.sh**
-Commands for calculating non-B DNA motif density and GC content in 1-00kb windows.
+Commands for calculating non-B DNA motif density and GC content in 100kb windows.
 
 #### **new_sequence_commands.sh**
-Analysis of new sequence in the T2T assemblies vs. old sequence (non T2T genomes), including scripts to align new vs old. 
+Analysis of new sequence in the T2T assemblies vs. old sequence (non T2T reference genomes), including scripts to align new vs old. 
 
 #### **repeat_commands.sh**
 Commands for enrichment analysis in repeats (including paths to repeat annotations). Also contains the detailed analysis of the satellites Walusat, LSAU and SST1. 
