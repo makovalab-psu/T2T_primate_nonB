@@ -240,26 +240,26 @@ mkdir functional/human/permutation
 # density (for now, not GC corrected)
 cat T2T_primate_nonB/helpfiles/pri_species_list.txt |grep "human" |while read -r sp latin filename;
 do
-    for i in {1..10}
+    for i in {1..1}
     do
         echo '#!/bin/bash
         module load bedtools/2.31.0
-        cat ref/annotation/'$sp'/classes.txt |head -n1 |while read -r class bedfile
+        cat T2T_primate_nonB/helpfiles/functional_classes.txt |grep 'Repeats' |while read -r class bedfile
         do 
-            bedtools shuffle -i ref/annotation/human/$bedfile -excl ref/annotation/human/$bedfile -g <(cut -f1,2 ref/'$filename'.fai |grep -v chrM) >functional/'$sp'/permutation/$class.perm_'$i'.bed 
-            bedtools getfasta -fi ref/assemblies/chm13v2.0.fa -bed functional/human/permutation/autosome_gene_protCode.perm1.bed  | awk '"'"'(!/^>/){gc+=gsub(/[gGcC]/,""); at+=gsub(/[aAtT]/,"")}END{print gc"\t"at}'"'"' >functional/'$sp'/permutation/$class.perm_'$i'.bed.nuc
+       #     bedtools shuffle -i ref/annotation/human/$bedfile -excl ref/annotation/human/$bedfile -g <(cut -f1,2 ref/'$filename'.fai |grep -v chrM) >functional/'$sp'/permutation/$class.perm_'$i'.bed 
+      #      bedtools nuc -fi ref/assemblies/'$filename' -bed <(cut -f1-3 functional/'$sp'/permutation/$class.perm_'$i'.bed) >functional/'$sp'/permutation/$class.perm_'$i'.withGC.bed
             echo "Looking at $class" 
             tmp="genome "$class
             len=`awk '"'"'{sum+=$3-$2}END{print sum}'"'"' ref/annotation/human/$bedfile`
             cat densities/'${sp}'_pri_nonB_genome_wide.txt |grep -v "all" | while read -r non_b tot dens;
             do
                 echo "looking at $non_b"
-                d=`intersectBed -a <(cut -f1-4 ref/annotation/human/$bedfile) -b <(cat nonB_annotation/'${sp}'_pri/*_${non_b}.bed) -wo |awk -v l=$len -v dtot=$dens '"'"'{sum+=$8}END{d=sum/l; frac=d/dtot; print frac}'"'"'`
+                d=`intersectBed -a <(cut -f1-4 functional/'$sp'/permutation/$class.perm_'$i'.bed) -b <(cat nonB_annotation/'${sp}'_pri/genome_${non_b}.bed) -wo |awk -v l=$len -v dtot=$dens '"'"'{sum+=$8}END{d=sum/l; frac=d/dtot; print frac}'"'"'`
                 tmp=`echo $tmp" "$d`
-                echo $tmp |sed "s/ /\t/g" >functional/'$sp'/permutation/enrichment.$class.perm_$1.tsv
+                echo $tmp |sed "s/ /\t/g" >functional/'$sp'/permutation/enrichment.$class.perm_'$i'.tsv
             done
         done
-        ' | sbatch -J $i --ntasks=1 --cpus-per-task=1 --time=5:00:00 --partition=open 
+        ' | sbatch -J $i --ntasks=1 --cpus-per-task=2  --mem-per-cpu=8G --time=10:00:00 --partition=open 
     done
 done
 

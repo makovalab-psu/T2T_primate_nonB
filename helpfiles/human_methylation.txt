@@ -1,2 +1,2 @@
-H002	ref/methylation/chm13v2.0_hg002_CpG_ont_guppy6.1.2.bed
+HG002	ref/methylation/chm13v2.0_hg002_CpG_ont_guppy6.1.2.bed
 chm13	ref/methylation/chm13v2.0_CHM13_CpG_ont_guppy3.6.0_nanopolish0.13.2.formatted.bed

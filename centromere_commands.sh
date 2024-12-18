@@ -109,6 +109,17 @@ do
     done
 done
 
+# Combined file with centromere locations 
+for hap in "pri"  "alt" 
+do
+    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v siamang |while read -r sp latin filename;
+    do
+        awk -v sp=$sp -v OFS='\t' '{print sp,$1,$2,$3}' centromeres/${sp}_${hap}/cen.merged.bed >>centromeres/${hap}_6sp_centromeres_merged.tsv
+        awk -v sp=$sp -v OFS='\t' '{print sp,$1,$2,$3}' centromeres/${sp}_${hap}/cen.bed >>centromeres/${hap}_6sp_centromeres_unmerged.tsv
+    done 
+done 
+
+
 
 
 # For GC correction, to be used later
@@ -117,6 +128,48 @@ awk '!/^>/{gc+=gsub(/[gGcC]/,""); at+=gsub(/[aAtT]/,"");} END{ printf "%.2f%%\n"
 
 ##### FOR THE PAPER, CALCULATE HOW MANY CHR THAT HAS AT LEAST ONE non-B ENRICHED
 # I do this in the R script that generates the centromere figure!
+
+
+
+# ~~~~~~~~~~~~~~~~~ CENTROMERE DENSITIES INSTEAD OF ENRICHMENT ~~~~~~~~~~~~~~~~~
+
+# Density per chromosome
+module load bedtools/2.31.0
+for hap in "pri" "alt" 
+do
+    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v bonobo |grep -v siamang |while read -r sp latin filename;
+    do
+        echo '#!/bin/bash
+        module load bedtools/2.31.0
+        echo "Chr APR DR GQ IR MR STR Z" |sed "s/ /\t/g" >centromeres/'$sp'_'$hap'/density_per_chrom.tsv
+        for chr in $(cut -f1 centromeres/'$sp'_'$hap'/cen.bed |uniq)
+        do
+            c_len=`awk -v c=$chr '"'"'($1==c){sum+=$3-$2}END{print sum}'"'"' centromeres/'$sp'_'$hap'/cen.bed`
+            chralias=`echo $chr |cut -f1 -d"_"`
+            tmp="$chralias"
+            cat densities/'$sp'_'$hap'_nonB_genome_wide.txt |grep -v "all" | while read -r non_b tot dens;
+            do
+                d=`intersectBed -a <(awk -v c=$chr '"'"'($1==c){print}'"'"' centromeres/'$sp'_'$hap'/cen.bed) -b nonB_annotation/'$sp'_'$hap'/genome_${non_b}.bed -wo |awk -v l=$c_len '"'"'{sum+=$8}END{d=sum/l; print d}'"'"'`
+                tmp=`echo $tmp" "$d`
+                echo $tmp >tmp.$SLURM_JOB_ID
+            done
+            cat tmp.$SLURM_JOB_ID |sed "s/ /\t/g" >>centromeres/'$sp'_'$hap'/density_per_chrom.tsv
+        done
+        '| sbatch -J $sp.$hap --ntasks=1 --cpus-per-task=1 --time=1:00:00 --partition=open
+     done
+done
+# Merge the species for plotting (use only "chr*", not chr*_hap*_hsa*)
+for hap in "pri"  "alt" 
+do
+    echo "Species Chr APR DR GQ IR MR STR Z" |sed 's/ /\t/g'  >centromeres/${hap}_6sp_density_merged.tsv
+    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v siamang |while read -r sp latin filename;
+    do
+        awk -v sp=$sp '(NR>1){split($1,s,"_"); $1=s[1]; print sp,$0}' centromeres/${sp}_${hap}/density_per_chrom.tsv |sed 's/^ //' |sed 's/ /\t/g' >>centromeres/${hap}_6sp_density_merged.tsv
+    done
+done
+
+
+
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ STATISTICAL TEST ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -300,6 +353,33 @@ do
     done
 done 
 
+# SAME, BUT INCLUDE 1MB FLANKS 
+# Humans
+intersectBed -a <(awk -v OFS="\t" '{$2=$2-1000000; $3=$3+1000000; print}' centromeres/human_pri/cen.bed) -b <(cut -f1-4 ref/centromeres/databaseS15_cenpB_pJalpha.bed) -wo |cut -f1,2,3 |uniq >centromeres/human_pri/cen1MbFlank_with_cenpb.bed
+intersectBed -v -a centromeres/human_pri/cen.bed -b centromeres/human_pri/cen1MbFlank_with_cenpb.bed >centromeres/human_pri/cen1MbFlank_without_cenpb.bed
+# Non-humans
+for hap in "pri" "alt"
+do
+    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v human |grep -v siamang |while read -r sp latin filename;
+    do 
+        prefix=`echo $filename |cut -f1 -d"."`
+        intersectBed -a <(awk -v OFS="\t" '{$2=$2-1000000; $3=$3+1000000; print}' centromeres/${sp}_${hap}/cen.bed) -b <(cut -f1-4 ref/centromeres/${prefix}_v2.0.cenpb_sites_v1.0.bed) -wo |cut -f1,2,3 |uniq >centromeres/${sp}_${hap}/cen1MbFlank_with_cenpb.bed
+        intersectBed -v -a centromeres/${sp}_${hap}/cen.bed -b centromeres/${sp}_${hap}/cen1MbFlank_with_cenpb.bed >centromeres/${sp}_${hap}/cen1MbFlank_without_cenpb.bed
+    done 
+done 
+#Merge 
+for hap in "pri" "alt"
+do
+    echo "Species Chr CENPB" | sed 's/ /\t/g' >centromeres/${hap}_6sp_cenpb_incl1MbFlanks.tsv
+    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v siamang |while read -r sp latin filename;
+    do 
+        awk -v OFS="\t" -v sp=$sp '{split($1,s,"_"); print sp, s[1], "Yes"}' centromeres/${sp}_${hap}/cen1MbFlank_with_cenpb.bed >>centromeres/${hap}_6sp_cenpb_incl1MbFlanks.tsv
+        awk -v OFS="\t" -v sp=$sp '{split($1,s,"_"); print sp, s[1], "No"}' centromeres/${sp}_${hap}/cen1MbFlank_without_cenpb.bed >>centromeres/${hap}_6sp_cenpb_incl1MbFlanks.tsv
+    done
+done 
+
+
+
 # Plot and calculated statistics with plot_figX_cenpb.R 
 
 
@@ -310,16 +390,22 @@ for hap in "pri" "alt"
 do
     cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v siamang |while read -r sp latin filename;
     do
-        awk -v OFS="\t" '{start=$2-1000000; print $1,start,$2}' centromeres/${sp}_${hap}/cen.merged.bed >centromeres/${sp}_${hap}/cen.upstream1Mb.bed
-        awk -v OFS="\t" '{start=$2-3000000; print $1,start,$2}' centromeres/${sp}_${hap}/cen.merged.bed >centromeres/${sp}_${hap}/cen.upstream3Mb.bed
-        awk -v OFS="\t" '{end=$3+1000000; print $1,$3,end}' centromeres/${sp}_${hap}/cen.merged.bed >centromeres/${sp}_${hap}/cen.downstream1Mb.bed
-        awk -v OFS="\t" '{end=$3+3000000; print $1,$3,end}' centromeres/${sp}_${hap}/cen.merged.bed >centromeres/${sp}_${hap}/cen.downstream3Mb.bed
+ #       awk -v OFS="\t" '{start=$2-1000000; print $1,start,$2}' centromeres/${sp}_${hap}/cen.merged.bed >centromeres/${sp}_${hap}/cen.upstream1Mb.bed
+  #      awk -v OFS="\t" '{start=$2-3000000; print $1,start,$2}' centromeres/${sp}_${hap}/cen.merged.bed >centromeres/${sp}_${hap}/cen.upstream3Mb.bed
+  #      awk -v OFS="\t" '{end=$3+1000000; print $1,$3,end}' centromeres/${sp}_${hap}/cen.merged.bed >centromeres/${sp}_${hap}/cen.downstream1Mb.bed
+  #      awk -v OFS="\t" '{end=$3+3000000; print $1,$3,end}' centromeres/${sp}_${hap}/cen.merged.bed >centromeres/${sp}_${hap}/cen.downstream3Mb.bed
+        # Also make files with both flanks+centromeres to subtract from background
+  #      awk -v OFS="\t" '{start=$2-1000000; end=$3+1000000; print $1,start,end}' centromeres/${sp}_${hap}/cen.merged.bed >centromeres/${sp}_${hap}/cen.merged.with1Mbflanks.bed
+  #      awk -v OFS="\t" '{start=$2-3000000; end=$3+3000000; print $1,start,end}' centromeres/${sp}_${hap}/cen.merged.bed >centromeres/${sp}_${hap}/cen.merged.with3Mbflanks.bed
+         join centromeres/${sp}_${hap}/cen.merged.bed <(grep -v "random" ref/$filename.fai) |awk -v OFS='\t' '{s=$3+1000000; print $1,s,$4}' >centromeres/${sp}_${hap}/cen.q_excl1Mbflank.bed
+         join centromeres/${sp}_${hap}/cen.merged.bed <(grep -v "random" ref/$filename.fai) |awk -v OFS='\t' '{e=$2-1000000; print $1,0,e}' >centromeres/${sp}_${hap}/cen.p_excl1Mbflank.bed
+   
     done 
 done 
 
 # Enrichment per chromosome
 module load bedtools/2.31.0
-for flank in "upstream1Mb" "upstream3Mb" "downstream1Mb" "downstream3Mb"
+for flank in  "q_excl1Mbflank" "p_excl1Mbflank" #"upstream1Mb" "upstream3Mb" "downstream1Mb" "downstream3Mb"
 do 
     for hap in "pri"  "alt" 
     do
@@ -347,7 +433,7 @@ do
 done 
 
 # Merge the species for plotting (use only "chr*", not chr*_hap*_hsa*)
-for flank in "upstream1Mb" "upstream3Mb" "downstream1Mb" "downstream3Mb"
+for flank in "q_excl1Mbflank" "p_excl1Mbflank" # "upstream1Mb" "upstream3Mb" "downstream1Mb" "downstream3Mb"
 do 
     for hap in "pri"  "alt" 
     do
@@ -355,51 +441,62 @@ do
         cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v siamang |while read -r sp latin filename;
         do
             awk -v sp=$sp '(NR>1){split($1,s,"_"); $1=s[1]; print sp,$0}' centromeres/${sp}_${hap}/${flank}.enrichment_per_chrom.tsv |sed 's/^ //' |sed 's/ /\t/g' >>centromeres/${hap}_6sp_${flank}_enrichment_merged.tsv
+        done
     done
 done 
 
-
+# THIS PART IS NOT USED FOR NOW!! 
 # For statistical comparison, make windows outside both flanks and chromosomes
-# (might be hard for some small chromosomes, and the ones with very long centromeres)
-for flank in "upstream1Mb" "downstream1Mb" #"upstream3Mb" "downstream3Mb"
+# Maybe we can use the same background for both flanks. 
+# (let see how much there is left for very short chromosomes, and chr with long centromeres...)
+# STARTED GORILLA, BOTH FLANK  SIZES AND HAPLOTYPES
+for flank in "1Mb" "3Mb"
 do 
-
-for hap in "pri" "alt" 
-do
-    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep "gorilla" |grep -v siamang |while read -r sp latin filename;
+    for hap in "pri" "alt" 
     do
-        for chr in $(cut -f1 centromeres/${sp}_$hap/cen.bed |uniq)
+        cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep "chimp" |grep -v siamang |while read -r sp latin filename;
         do
-            echo '#!/bin/bash
-            module load bedtools/2.31.0
-            c_len=1000000
-            chrlen=`awk -v c='$chr' '"'"'($1==c){print $2}'"'"' ref/'$filename'.fai`
-            poswin=`echo $chrlen"/"$c_len |bc`
-            minsize=1000000
-            if [ "$poswin" -lt "120" ]
-            then
-              echo "For '$chr', there will be less than 120 nonovl windows"
-              slide=`echo "("$chrlen"-"$c_len")/120"|bc`
- #             bedtools makewindows -g <(awk -v c='$chr' '"'"'(c==$1){print}'"'"' ref/'$filename'.fai) -s $slide -w $c_len |subtractBed -a - -b centromeres/'${sp}'_'$hap'/cen.merged.bed |awk -v min=$minsize -v clen=$c_len '"'"'($3-$2>min || $3-$2==clen){print}'"'"' |shuf -n 100 |sort -k2,2n >centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.bed
-            else 
-              echo "For '$chr', there will be more than 120 nonovl windows"
-  #            bedtools makewindows -g <(awk -v c='$chr' '"'"'(c==$1){print}'"'"' ref/'$filename'.fai) -w $c_len |subtractBed -a - -b centromeres/'${sp}'_'$hap'/cen.merged.bed |awk -v min=$minsize -v clen=$c_len '"'"'($3-$2>min || $3-$2==clen){print}'"'"' |shuf -n 100 |sort -k2,2n >centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.bed
-            fi
-   #         bedtools nuc -fi ref/assemblies/'$filename' -bed centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.bed >centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.with_GC.bed
-            rm -f centromeres/'${sp}'_'$hap'/windows/'$chr'.100rand.enrichment.tsv
-            tmp="'$chr'"
-            while read line
-            do 
-              cat densities/'${sp}'_'${hap}'_nonB_genome_wide.txt |grep -v "all" | while read -r non_b tot dens;
-              do
-                  echo $line |sed "s/ /\t/g" >tmp.$SLURM_JOB_ID.bed
-                  d=`intersectBed -a tmp.$SLURM_JOB_ID.bed -b nonB_annotation/'$sp'_'$hap'/genome_${non_b}.bed -wo |awk -v l=$c_len -v dtot=$dens '"'"'{sum+=$8}END{d=sum/l; frac=d/dtot; print frac}'"'"'`
-                  tmp=`echo $tmp" "$d`
-                  echo $tmp >tmp.$SLURM_JOB_ID
-              done
-              cat tmp.$SLURM_JOB_ID |sed "s/ /\t/g" >>centromeres/'${sp}'_'$hap'/windows/'$chr'.100rand.enrichment.tsv
-            done <centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.bed
-            '| sbatch -J $sp.$hap --ntasks=1 --cpus-per-task=1 --partition=open --time=5:00:00
+            for chr in $(cut -f1 centromeres/${sp}_$hap/cen.bed |uniq)
+            do
+                echo $flank
+                if [ "$flank" = "1Mb" ]
+                then
+                    w_len=1000000
+                else 
+                    w_len=3000000
+                fi 
+                echo $w_len
+                echo '#!/bin/bash
+                module load bedtools/2.31.0
+                c_len=`awk -v c='$chr' '"'"'($1==c){sum+=$3-$2}END{print sum}'"'"' centromeres/'${sp}'_'$hap'/cen.merged.bed`
+                chrlen=`awk -v c='$chr' '"'"'($1==c){print $2}'"'"' ref/'$filename'.fai`
+                poswin=`echo $chrlen"/"'$w_len' |bc`
+                minsize=1000000
+                if [ "$poswin" -lt "120" ]
+                then
+                echo "For '$chr', there will be less than 120 nonovl windows"
+                slide=`echo "("$chrlen"-"$c_len"-2*"'$w_len'")/120"|bc`
+                 bedtools makewindows -g <(awk -v c='$chr' '"'"'(c==$1){print}'"'"' ref/'$filename'.fai) -s $slide -w '$w_len' |subtractBed -a - -b centromeres/'${sp}'_'$hap'/cen.merged.with'$flank'flanks.bed |awk -v min=$minsize '"'"'($3-$2>=min){print}'"'"' |shuf -n 100 |sort -k2,2n >centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.excl'$flank'flanks.bed
+                else 
+                echo "For '$chr', there will be more than 120 nonovl windows"
+                bedtools makewindows -g <(awk -v c='$chr' '"'"'(c==$1){print}'"'"' ref/'$filename'.fai) -w '$w_len' |subtractBed -a - -b centromeres/'${sp}'_'$hap'/cen.merged.with'$flank'flanks.bed |awk -v min=$minsize '"'"'($3-$2>=min){print}'"'"' |shuf -n 100 |sort -k2,2n >centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.excl'$flank'flanks.bed
+                fi
+                bedtools nuc -fi ref/assemblies/'$filename' -bed centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.excl'$flank'flanks.bed >centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.excl'$flank'flanks.with_GC.bed
+                rm -f centromeres/'${sp}'_'$hap'/windows/'$chr'.'$flank'.100rand.enrichment.tsv
+                tmp="'$chr'"
+                while read line
+                do 
+                cat densities/'${sp}'_'${hap}'_nonB_genome_wide.txt |grep -v "all" | while read -r non_b tot dens;
+                do
+                    echo $line |sed "s/ /\t/g" >tmp.$SLURM_JOB_ID.bed
+                    d=`intersectBed -a tmp.$SLURM_JOB_ID.bed -b nonB_annotation/'$sp'_'$hap'/genome_${non_b}.bed -wo |awk -v l='$w_len' -v dtot=$dens '"'"'{sum+=$7}END{d=sum/l; frac=d/dtot; print frac}'"'"'`
+                    tmp=`echo $tmp" "$d`
+                    echo $tmp >tmp.$SLURM_JOB_ID
+                done
+                cat tmp.$SLURM_JOB_ID |sed "s/ /\t/g" >>centromeres/'${sp}'_'$hap'/windows/'$chr'.'$flank'.100rand.enrichment.tsv
+                done <centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.excl'$flank'flanks.bed
+                '| sbatch -J $sp.$hap --ntasks=1 --cpus-per-task=1 --partition=open --time=2:00:00
+            done 
         done 
     done 
 done 
@@ -423,3 +520,120 @@ do
     done 
   done 
 done 
+
+
+for flank in "1Mb" "3Mb"
+do 
+    echo "$flank"
+    if [ "$flank" = "1Mb" ]; then
+        w_len=1000000
+    else 
+        w_len=3000000
+    fi 
+    echo "$w_len"
+done
+
+
+# ~~~~~~~~~~~~~~~~ ADD SATELLITE ANNOTATION TO CENTROMERE PLOTS ~~~~~~~~~~~~~~~~
+# In the CenSat annotation from the human genome, the categories are as follows:
+# (Tabel from genome browser)
+# Active αSat HOR (hor ... L)	red
+# Inactive αSat HOR (hor)	orange
+# Divergent αSat HOR (dhor)	dark red
+# Monomeric αSat (mon)	peach/yellow
+# Classical Human Satellite 1A (hsat1A)	light green
+# Classical Human Satellite 1B (hsat1B)	dark green
+# Classical Human Satellite 2 (hsat2)	light blue
+# Classical Human Satellite 3 (hsat3)	blue
+# Beta Satellite (bsat)	pink
+# Gamma Satellite (gsat)	purple
+# Other centromeric satellites (censat)	teal
+# Centromeric transition regions (ct)	grey
+
+# Downloading the censat annotation
+cd ref/repeats/
+wget https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/annotation/chm13v2.0_censat_v2.0.bed
+wget https://genomeark.s3.amazonaws.com/species/Gorilla_gorilla/mGorGor1/assembly_curated/repeats/mGorGor1_v2.0_CenSat_v2.0.bb
+wget https://genomeark.s3.amazonaws.com/species/Pan_paniscus/mPanPan1/assembly_curated/repeats/mPanPan1_v2.0_CenSat_v2.0.bb
+wget https://genomeark.s3.amazonaws.com/species/Pan_troglodytes/mPanTro3/assembly_curated/repeats/mPanTro3_v2.0_CenSat_v2.0.bb
+wget https://genomeark.s3.amazonaws.com/species/Pongo_abelii/mPonAbe1/assembly_curated/repeats/mPonAbe1_v2.0_CenSat_v2.0.bb
+wget https://genomeark.s3.amazonaws.com/species/Pongo_pygmaeus/mPonPyg2/assembly_curated/repeats/mPonPyg2_v2.0_CenSat_v2.0.bb
+wget https://genomeark.s3.amazonaws.com/species/Symphalangus_syndactylus/mSymSyn1/assembly_curated/repeats/mSymSyn1_v2.1_CenSat_v2.0.bb 
+~/software/bigBedToBed mGorGor1_v2.0_CenSat_v2.0.bb mGorGor1_v2.0_CenSat_v2.0.bed 
+~/software/bigBedToBed mPanPan1_v2.0_CenSat_v2.0.bb mPanPan1_v2.0_CenSat_v2.0.bed
+~/software/bigBedToBed mPanTro3_v2.0_CenSat_v2.0.bb mPanTro3_v2.0_CenSat_v2.0.bed
+~/software/bigBedToBed mPonAbe1_v2.0_CenSat_v2.0.bb mPonAbe1_v2.0_CenSat_v2.0.bed
+~/software/bigBedToBed mPonPyg2_v2.0_CenSat_v2.0.bb mPonPyg2_v2.0_CenSat_v2.0.bed
+~/software/bigBedToBed mSymSyn1_v2.1_CenSat_v2.0.bb mSymSyn1_v2.1_CenSat_v2.0.bed
+cd ../..
+
+#Human 
+awk -v OFS="\t" '(NR>1){if($4~/^hor/){if($4~/L)$/){print $1,$2,$3,"active_asat"}else{print $1,$2,$3,"inactive_asat"}}else{split($4,s,"_"); print $1,$2,$3,tolower(s[1])}}' ref/repeats/chm13v2.0_censat_v2.0.bed >centromeres/human_pri/cenSat_shortnames.bed
+
+# Others
+for hap in "pri" "alt" #
+do
+    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |while read -r sp latin filename;
+    do
+        name=`echo $filename |cut -f1 -d"."`
+        cut -f1 ref/$filename.fai |grep -v random |grep -f - ref/repeats/$name*CenSat*.bed |cut -f1 -d "(" |cut -f1,2,3,4 |awk -v OFS="\t" '{if($4=="active_hor"){print $1,$2,$3,"active_asat"}else if($4=="hor"){print $1,$2,$3,"inactive_asat"}else{split($4,s,"_"); split(s[1],t,","); print $1,$2,$3,tolower(t[1])}}' >centromeres/${sp}_$hap/cenSat_shortnames.bed
+    done 
+done 
+
+#Merge the different species per haplotype
+for hap in "pri"  "alt" 
+do
+    echo "Species Chr Sat_start Sat_stop Sat" |sed 's/ /\t/g' >centromeres/${hap}_6sp_cenSat_merged.tsv
+    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v siamang |while read -r sp latin filename;
+    do
+        awk -v OFS="\t" -v sp=$sp '{split($1,s,"_"); $1=s[1]; print sp,$0}' centromeres/${sp}_${hap}/cenSat_shortnames.bed >>centromeres/${hap}_6sp_cenSat_merged.tsv
+    done 
+done 
+
+
+# INHOUSE
+# Checking what types there are 
+cut -f1 ref/mPanPan1.pri.cur.20231122.fasta.fai |grep -v random |grep -f - ref/repeats/mPanPan1_v2.0_CenSat_v2.0.bed |cut -f1 -d "(" |cut -f1,2,3,4 |cut -f4 |sort |uniq -c
+     26 active_hor
+    248 bSat
+   1087 cenSat
+    855 ct
+     25 dhor
+      6 GAP
+     77 gSat
+     21 hor
+    152 HSat1A
+     28 HSat1B
+     35 HSat2
+     10 HSat2_3
+    118 HSat3
+     34 mixedSuperFamily
+    138 mon
+    169 mon/hor
+     40 rDNA
+    509 subTerm
+
+
+
+
+
+# ~~~~~~~~~~~~~~~~ CENTROMERE SUPRACHROMOSOMAL FAMILIES ~~~~~~~~~~~~~~~~
+# Check the active centromere superfamilies 
+sed 's/(/\t/g' chm13v2.0_censat_v2.0.bed |sed 's/)/\t/g' | awk -v OFS="\t" '(NR>1){if($4~/hor/){if($5~/L$/){print $1,$2,$3,$4,$5}}}' |less
+
+# Non-humans
+for hap in "pri" "alt" 
+do
+    echo "Species LongChr Chr SF" |sed 's/ /\t/g' >centromeres/${hap}_6sp_SF_merged.tsv
+    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v human |grep -v siamang |while read -r sp latin filename;
+    do
+        echo "Looking at $sp"
+        name=`echo $filename |cut -f1 -d"."`
+        cut -f1 ref/$filename.fai |grep -v random |grep -f - ref/repeats/$name*CenSat*.bed | grep "active_hor" |cut -f1,4 |sed 's/(/\t/' |sed 's/)/\t/' |awk -v OFS="\t" -v sp=$sp '{split($1,s,"_"); print sp,$1,s[1],$3}' >>centromeres/${hap}_6sp_SF_merged.tsv
+    done
+done 
+# Human file is different from the other files
+awk -v OFS="\t" '(NR>1){if($4~/^hor/ && $4~/L)$/){print}}' ref/repeats/chm13v2.0_censat_v2.0.bed  |cut -f1,4 |sed 's/(/\t/' |sed 's/\//\t/' |sed 's/C/\t/' |cut -f1,3 |sed 's/S/SF/g' |awk '{print "human\t"$1,"\t"$1,"\t",$2}' >>centromeres/pri_6sp_SF_merged.tsv
+
+# Combine SF annotation with non-B enrichment in R:
+# plot_centromere_significance_and_SF_correlation.R

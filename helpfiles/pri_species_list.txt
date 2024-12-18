@@ -4,4 +4,4 @@ human Homo_sapiens chm13v2.0.fa
 gorilla Gorilla_gorilla mGorGor1.pri.cur.20231122.fasta
 borang  Pongo_pygmaeus  mPonPyg2.pri.cur.20231122.fasta
 sorang  Pongo_abelii  mPonAbe1.pri.cur.20231205.fasta
-siamang Symphalangus_syndactylus  mSymSyn1.pri.cur.20240514.fasta
+siamang	Symphalangus_syndactylus	mSymSyn1.pri.cur.20240514.fasta

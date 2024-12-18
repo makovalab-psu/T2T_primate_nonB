@@ -16,3 +16,6 @@ borang chrY 49419398
 sorang autosomes 3028670501
 sorang chrX 162586321
 sorang chrY 67827326
+siamang autosomes 3067375473
+siamang chrX 165573899
+siamang chrY 29938336

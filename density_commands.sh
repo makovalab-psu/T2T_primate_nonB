@@ -5,11 +5,11 @@
 
 # Create genomic windows and make length file
 module load bedtools/2.31.0
-mkdir -p ref/windows
-rm -f T2T_primate_nonB/helpfiles/all_lengths.txt
-for hap in "pri" "alt" 
+#mkdir -p ref/windows
+#rm -f T2T_primate_nonB/helpfiles/all_lengths.txt
+for hap in  "alt" #"pri"
 do
-  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |while read -r sp latin filename;
+  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep siamang |while read -r sp latin filename;
   do
     mkdir -p ref/windows/${sp}_$hap
     bedtools makewindows -g ref/$filename.fai -w 100000 >ref/windows/${sp}_$hap/all_100k_windows.bed;
@@ -34,16 +34,17 @@ done
 # Fill windows with number of covered bases 
 # (run as one batch job per hap/sp/chrtype/nonB)
 mkdir densities
-for hap in  "alt" #"pri"
+for hap in  "alt" "pri"
 do
-  for chr in "chrX" "chrY" #"autosomes" 
+  for chr in "chrX" "chrY" "autosomes" 
   do
     cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |while read -r sp latin filename;
     do
-      for n in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
+      for n in "TRI" #"APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
       do      
         # One bed per sp/chrtype/nonBtype
-        echo '#!/bin/bash     
+        echo '#!/bin/bash  
+          module load bedtools/2.31.0
         rm -f densities/'${sp}'_'${hap}'/'${chr}'_'${n}'_100kb.bed
         intersectBed -wao -a ref/windows/'${sp}'_'${hap}'/'${chr}'_100k_windows.bed -b nonB_annotation/'${sp}'_'${hap}'/'${chr}'_'${n}'.bed | cut -f1,2,3,7 |awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" >densities/'${sp}'_'${hap}'/'${chr}'_'${n}'_100kb.bed 
         '| sbatch -J $sp.X --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8G
@@ -54,9 +55,9 @@ done
 # Note that chrX and chrY are empty for the alternative haplotype. 
 
 # Also combine into one file per species/haplo 
-for hap in "pri" "alt" 
+for hap in "alt" # "pri" 
 do
-  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |while read -r sp latin filename;
+  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep siamang |while read -r sp latin filename;
   do
     rm densities/${sp}_${hap}_comb_100kb.bed
     for chr in "autosomes" "chrX" "chrY" #
@@ -127,6 +128,7 @@ do
     done 
   done 
 done 
+
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
