@@ -66,30 +66,6 @@ do
      ' |sbatch -J $file --ntasks=1 --cpus-per-task=4 --time=1:00:00 --partition=open
 done 
 
-# INHOUSE: Make translation files  
-mkdir T2T_primate_nonB/helpfiles/chr_translation
-for hap in "pri" "alt" 
-do 
-    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
-    do 
-        echo "#Chr New Old" |sed 's/ /\t/g' >T2T_primate_nonB/helpfiles/chr_translation/${sp}_${hap}.txt
-        for chr in $(cut -f1 ref/$filename.fai)
-        do 
-            echo $chr 
-            chr_short=`echo $chr |cut -f1 -d"_"`
-            grep ">" new_sequence/${sp}_${hap}/old.$chr_short.fa |sed 's/>//' |awk -v OFS="\t" -v c1=$chr_short -v c2=$chr '{print c1,c2,$0}' >>T2T_primate_nonB/helpfiles/chr_translation/${sp}_${hap}.txt
-        done 
-    done 
-done
-# INHOUSE: New for human since the I downloaded fasta from UCSC instead of NCBI 
-echo "#Chr New Old" |sed 's/ /\t/g' >T2T_primate_nonB/helpfiles/chr_translation/human_pri.txt
-for chr in $(cut -f1 ref/chm13v2.0.fa.fai |grep -v "chrM")
-do 
-    echo $chr 
-    chr_short=`echo $chr |cut -f1 -d"_"`
-    echo $chr_short" "$chr" "$chr |sed 's/ /\t/g' >>T2T_primate_nonB/helpfiles/chr_translation/human_pri.txt
-done 
-
 
 # Extract fasta sequence 
 for hap in "pri" "alt" 
@@ -147,7 +123,6 @@ done
 # many-to-one. Using a one-to-one approach would result in even more new seq.
 
 # Convert to bed
-module load bedtools/2.31.0
 for hap in "pri" "alt" 
 do 
    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
@@ -296,35 +271,5 @@ do
 done 
 
 # Stats for Table 1 is calculated in R, using the script    
-# T2T_primate_nonB/R/chisquare_test_for_enrichment.R
+# T2T_primate_nonB/R/chisquare_test_for_table1.R
    
-
-
-
-
-
-# INHOUSE - NOT USED  
-# With fractions 
-for hap in "pri" "alt" 
-do 
-   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v human |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
-  do
-    echo "Chr nonB Region bp_outside_nonB bp_inside_nonB" | sed 's/ /\t/' >new_sequence/${sp}_$hap/stat_table_fractions.tsv
-    awk '(NR>1 && NF==8){out_new=($3-$4)/$3; in_new=$4/$3; out_old=($6-$7)/$6; in_old=$7/$6; print $1,$2,"New",out_new,in_new,"\n",$1,$2,"Old",out_old,in_old}' new_sequence/${sp}_$hap/summary.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/${sp}_$hap/stat_table_fractions.tsv
-  done
-done 
-
-# Numbers for Mann Whitney U test, all species together
-echo "Species Chr nonB Region Density" | sed 's/ /\t/' >new_sequence/5sp_stat_table_densities.tsv
-for hap in "pri" "alt" 
-do 
-   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
-  do
-     awk -v sp=${sp}_$hap '(NR>1 && NF==8){print sp,$1,$2,"New",$5,"\n",sp,$1,$2,"Old",$8}' new_sequence/${sp}_$hap/summary.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/5sp_stat_table_densities.tsv
-  done
-done
-
-
-
-
-
