@@ -80,7 +80,6 @@ do
     '| sbatch -J $ind --ntasks=1 --cpus-per-task=1 --time=1:00:00 --partition=open
 done 
 
-
 # Go through the repeat classes and calculate average methylation for G4s 
 # in repeats of interest
 cat T2T_primate_nonB/helpfiles/human_methylation.txt |while read -r ind filename
@@ -122,9 +121,9 @@ done
 
 
 # Plot with 
-Rscript plot_fig6_methylation.R
+Rscript plot_fig6ABC_repeats_methylation.R
 
-# Noted thst for some repeats (like SVA), CHM13 has many more methylated sites
+# Noted that for some repeats (like SVA), CHM13 has many more methylated sites
 # than HG002. Intersected them with -v to get everything NOT in HG002, and a 
 # great part of it came from a region on a single chromosome (chr2). This 
 # region doesn't have any methylated sites annotated for HG002, so most likely
@@ -181,13 +180,12 @@ done
     join <(tail -n+2 methylation/human/G4_tables/${alias}_H002.txt|sort) <(tail -n+2 methylation/human/G4_tables/${alias}_chm13.txt|sort) |sort -k1,1 |join -  <(awk -v OFS="\t" '{s=$2-1; print $1":"$2"-"$3, $5, $1,s,$3}' methylation/human/overlap/G4s_in_roi.bed |sort -k1,1) >methylation/human/G4_tables/${alias}_combined.txt
 done
 
-# ADD SEQUENCES (fix code!)
+# ADD SEQUENCES 
 ## Add sequences for the G4 motifs to find motifs to verify experimentally
 # From original Quadron files 
 for i in {1..22} "X" "Y"
 do
-    grep "^DATA" Quadron/chr${i}_out.txt | \
-#    grep "^DATA" ../Kaivans_annotation/non-B-DNA-Annotations/Homo_sapiens/Quadron/chr${i}_out.txt | \
+    grep "^DATA" path/to/Quadron/chr${i}_out.txt | \
     awk -v c="chr"$i '($5!="NA"){s=$2-1; e=s+4; print c":"s"-"e"\t"$3"\t"$6}' >>methylation/human/G4_with_sequence.txt
 done 
 # Then, merge with the other tables
@@ -195,6 +193,7 @@ cat T2T_primate_nonB/helpfiles/human_satellites_of_interest.txt |while read -r r
 do     
     join methylation/human/G4_tables/${alias}_combined.txt <(sort methylation/human/G4_with_sequence.txt) |sed 's/ /\t/g' >methylation/human/G4_tables/${alias}_seq_combined.txt; 
 done
+
 
 ###############################################################################
 # MORE DETAILED STUDY OF LSAU
@@ -286,4 +285,4 @@ do
 done
 
 # Plot methylation score and quadron score distribution 
-plot_FigS13_methylation_LSAU.R 
+# plot_FigS17_methylation_LSAU.R 
