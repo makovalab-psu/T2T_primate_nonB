@@ -89,54 +89,22 @@ done
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Make a list with all repeat types and their total lengths for each chr type
+# Make a list with all repeat types and their total lengths
 module load python/3.11.2
 cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r sp latin filename;
 do
-  grep "chrX" repeats/$sp/RepeatMasker.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/chrX.repeat_lengths.txt
-  grep "chrY" repeats/$sp/RepeatMasker.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/chrY.repeat_lengths.txt
-  grep -v "chrX" repeats/$sp/RepeatMasker.bed|grep -v "chrY" |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/autosomes.repeat_lengths.txt
-  cat repeats/$sp/RepeatMasker.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/genome_repeat_lengths.txt
+   cat repeats/$sp/RepeatMasker.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/genome_repeat_lengths.txt
 done
 
 # And for human satellites/composite
 sp="human"
-grep "chrX" repeats/$sp/composite_repeats.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/chrX.compos_lengths.txt
-grep "chrY" repeats/$sp/composite_repeats.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/chrY.compos_lengths.txt
-grep -v "chrX" repeats/$sp/composite_repeats.bed|grep -v "chrY" |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/autosomes.compos_lengths.txt
 cat repeats/$sp/composite_repeats.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/genome_compos_lengths.txt
-grep "chrX" repeats/$sp/new_satellites.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/chrX.newsat_lengths.txt
-grep "chrY" repeats/$sp/new_satellites.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/chrY.newsat_lengths.txt
-grep -v "chrX" repeats/$sp/new_satellites.bed|grep -v "chrY" |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/autosomes.newsat_lengths.txt
 cat repeats/$sp/new_satellites.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/genome_newsat_lengths.txt
-
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Summarize the enrichment of each non-B motif in all repeat classes
 # (Print NA if there are no such repeats in the genome)
-cat T2T_primate_nonB/helpfiles/pri_species_list.txt  |grep "human" |while read -r sp latin filename;
-do
-  for chr in  "autosomes" "chrX" "chrY" 
-  do
-    echo "Repeat APR DR GQ IR MR STR Z" |sed 's/ /\t/g' >repeats/${sp}_${chr}_repeat_enrichment.tsv
-    cat repeats/$sp/${chr}.repeat_lengths.txt | while read -r rep replen;
-    do
-      #repname=`echo $rep |sed 's/\//_/g'`
-      tmp=`echo $rep`
-      #Go through non-B
-      cat densities/${sp}_pri_nonB_genome_wide.txt |grep -v "all" | while read -r non_b tot dens;
-      do
-        d=`cat repeats/$sp/overlap/${chr}_${non_b}_repmask.bed | awk -v r=$rep -v l=$replen -v dtot=$dens '($4==r){sum+=$3-$2}END{if(l==0 || dtot==0){print "NA"} else{d=sum/l; frac=d/dtot; print frac}}'`
-        tmp=`echo $tmp" "$d`
-        echo $tmp >tmp
-      done
-      cat tmp |sed 's/ /\t/g' >>repeats/${sp}_${chr}_repeat_enrichment.tsv
-    done
-  done
-done
-
-# FULL GENOME 
 cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r sp latin filename;
 do
   echo '#!/bin/bash
@@ -156,30 +124,7 @@ do
   '| sbatch -J $sp --ntasks=1 --cpus-per-task=1 --time=1:00:00 --partition=open
 done
 
-# And for human satellites / composite repeats
-# Per chrom type # CHECK THIS PART, UNFINISHED OUTPUT FILES 
-sp="human"
-for type in "compos" "newsat"
-do
-  echo '#!/bin/bash
-  for chr in "chrY" "autosomes" "chrX"
-  do
-    echo "Repeat APR DR GQ IR MR STR Z" |sed "s/ /\t/g" >repeats/'$sp'_${chr}_'$type'_enrichment.tsv
-    cat repeats/'$sp'/${chr}.'$type'_lengths.txt | while read -r rep replen;
-    do
-      tmp=`echo $rep`
-      cat densities/'$sp'_pri_nonB_genome_wide.txt |grep -v "all" | while read -r non_b tot dens;
-      do
-        d=`cat repeats/'$sp'/overlap/${chr}_${non_b}_'$type'.bed | awk -v r=$rep -v l=$replen -v dtot=$dens '"'"'($4==r){sum+=$3-$2}END{if(l==0 || dtot==0){print "NA"} else{d=sum/l; frac=d/dtot; print frac}}'"'"'`
-        tmp=`echo $tmp" "$d`
-        echo $tmp >tmp
-      done
-      cat tmp |sed "s/ /\t/g" >>repeats/'$sp'_${chr}_'$type'_enrichment.tsv
-    done
-  done
-  '| sbatch -J $type --ntasks=1 --cpus-per-task=1 --time=1:00:00 --partition=open
-done
-# All chromosomes together 
+# COMPOSITE AND NEW SATELLITES, HUMAN
 for type in "compos" "newsat"
 do
   echo '#!/bin/bash
@@ -225,14 +170,13 @@ do
    awk -v sp=$type '{print sp,$0}' repeats/human/genome_${type}_lengths.txt |sed 's/^ //' |sed 's/ /\t/g' >>repeats/human_genome_compsat_lengths.txt
 done
 
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Plot main figure (human) 
-Rscript T2T_primate_nonB/R/plot_fig5_repeats.R 
+# Plot main figure (human, need to first generate methylation data)
+Rscript R/plot_fig6ABC_repeats_methylation.R
 # Plot supplementary figure (other species)
-Rscript T2T_primate_nonB/R/plot_figS2_repeats.R
+Rscript R/plot_figS9_enrichment_repeats.R
 # Plot supplementary figure (new satellites and composite repeats)
-Rscript T2T_primate_nonB/R/plot_figS3_repeats_compsat.R
+Rscript R/plot_figS8_enrichment_compsat_human.R
 
 
 
@@ -298,8 +242,6 @@ grep -v ">" repeats/human/walusat.chr14.fa |tr "\n" " " |sed 's/ //g' | sed 's/g
 # type, and chrY has a third type). I want to see if the non-B DNA content also
 # differs between the chromosomes. 
 
-
-
 # check space in between
 grep SST1 ref/repeats/chm13v2.0_RepeatMasker_4.1.2p1.2022Apr14.out |cut -f5-7 |sort -k1,1 -k2,2n |awk '{if(NR==1){chr=$1; end=$3}else{if(chr==$1){diff=$2-end; print $0"\t"diff; end=$3}else{chr=$1; end=$3}}}' |less
 
@@ -314,7 +256,7 @@ awk '($1=="chr13" && $2>12301367 && $3<12440010){print}' repeats/human/overlap/a
      99     396    4467
 awk '($1=="chr13" && $2>12301367 && $3<12440010){print}' repeats/human/overlap/autosomes_Z_repmask.bed |grep "SST1" |wc
       6      24     270
-# This means there are almost no Z-DNA motifs in SST1, but in the space between 
+# This means there are almost no Z-DNA motifs in SST1, but many in the space between 
 # the repeat units
 
 
@@ -322,8 +264,8 @@ awk '($1=="chr13" && $2>12301367 && $3<12440010){print}' repeats/human/overlap/a
 mkdir repeats/human/SST1
 for c in "chr13" "chr14" "chr21" "chr4" "chr17" "chr19" "chrY"
 do
-#  grep SST1 ref/repeats/chm13v2.0_RepeatMasker_4.1.2p1.2022Apr14.out |cut -f5,6,7 |awk -v c=$c '($1==c){print}' |sort -k2,2n >repeats/human/SST1/$c.exactRep.bed
- # grep SST1 ref/repeats/chm13v2.0_RepeatMasker_4.1.2p1.2022Apr14.out |cut -f5,6,7 |awk -v c=$c '($1==c){print}' |sort -k2,2n | awk -v OFS="\t" '{if(NR==1){start=$2; end=$3}else{if($2-end<1000){end=$3}else{print $1,start,end; start=$2;end=$3}}}END{print $1,start,end}' >repeats/human/SST1/$c.merge1kb.bed
+  grep SST1 ref/repeats/chm13v2.0_RepeatMasker_4.1.2p1.2022Apr14.out |cut -f5,6,7 |awk -v c=$c '($1==c){print}' |sort -k2,2n >repeats/human/SST1/$c.exactRep.bed
+  grep SST1 ref/repeats/chm13v2.0_RepeatMasker_4.1.2p1.2022Apr14.out |cut -f5,6,7 |awk -v c=$c '($1==c){print}' |sort -k2,2n | awk -v OFS="\t" '{if(NR==1){start=$2; end=$3}else{if($2-end<1000){end=$3}else{print $1,start,end; start=$2;end=$3}}}END{print $1,start,end}' >repeats/human/SST1/$c.merge1kb.bed
   grep SST1 ref/repeats/chm13v2.0_RepeatMasker_4.1.2p1.2022Apr14.out |cut -f5,6,7 |awk -v c=$c '($1==c){print}' |sort -k2,2n | awk -v OFS="\t" '{if(NR>1){if($2-end<1000){print $1,end,$2}}; end=$3}' >repeats/human/SST1/$c.intermediate1kb.bed
 done
 
@@ -383,7 +325,6 @@ do
 done 
 
 
-
 ################################################################################ 
 # Enrichment in CenSat (possibly overlapping with the other repeat annotation)
 
@@ -436,13 +377,11 @@ do
    awk -v sp=$sp '{print sp,$0}' repeats/${sp}/genome_cenSat_lengths.txt |sed 's/^ //' |sed 's/ /\t/g' >>repeats/7sp_genome_censat_lengths.txt
 done
 
-
-
-
+# Plot censat enrichment with R/plot_figS6_enrichment_censat.R
 
 
 ################################################################################
-# Check enrichment in repeats vs not repeats (all non-B combined)
+# Check enrichment in repeats vs not repeats (all non-B combined) for main text
 
 # ONLY REPEATMASKER FILES:
 # Calculate non-B density inside and outside repeats sequence
@@ -465,7 +404,7 @@ do
     ' |sbatch -J $sp --ntasks=1 --cpus-per-task=1 --mem-per-cpu=16G --time=1:00:00 
 done 
 
-# COMBINED:
+# COMBINED (this is what we used):
 echo "Species NonB RepTotBp RepNonB RepDens NRTotBp NRNonB NRDens" |sed 's/ /\t/g' >repeats/allrep_vs_nonrep_summary.txt
 cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
 do
@@ -540,3 +479,5 @@ cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin fil
 do
   awk -v OFS="\t" -v sp=$sp '{print sp,$0}' <(tail -n+2 repeats/${sp}_group_enrichment.tsv) >>repeats/7sp_group_enrichment.tsv
 done 
+
+# Plot with R/plot_fig6ABC_repeats_methylation.R (part B)
