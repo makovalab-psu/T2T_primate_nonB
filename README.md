@@ -41,3 +41,5 @@ All in-house python scripts used in the study.
 #### **R/**
 All R scripts to generate figures and statistics.
 
+### **helpfiles/**
+Textfiles with lists of species, files, repeats, and other information that are necessary to run most of the code in the different command files.
