@@ -6,9 +6,7 @@ Correspondence to Kateryna Makova (kdm16@psu.edu)
 
 ***
 
-## *THIS PAGE IS STILL UNDER CONSTRUCTION*
-
-### This repository includes the following files and directories:
+## This repository includes the following files and directories:
 
 #### **general_commands.sh**
 Includes a list of software, commands for creating the bed files, generate statistics and find overlaps between the motif types. 
