@@ -96,7 +96,7 @@ do
     '| sbatch -J $ind --ntasks=1 --cpus-per-task=1 --time=1:00:00 --partition=open
 done
 
-# Numbers for Table S1 are found in the files:
+# Numbers for Table S3 are found in the files:
 #methylation/human/methylation_in_G4_roi_chm13.txt  
 #methylation/human/methylation_in_roi_chm13.txt
 #methylation/human/methylation_in_G4_roi_HG002.txt   
@@ -131,7 +131,6 @@ Rscript plot_fig6ABC_repeats_methylation.R
 # expansion in chm13)
 grep SVA methylation/human/repeats_with_scores_H002.bed |intersectBed -v -a <(grep SVA methylation/human/repeats_with_scores_chm13.bed) -b - >temp_meth_in_chm13_nt_in_HG002_SVA.txt
 cut -f1 temp_meth_in_chm13_nt_in_HG002_SVA.txt |uniq -c
-
 
 
 
