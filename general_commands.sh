@@ -11,11 +11,16 @@
 # https://genomeark.s3.amazonaws.com/species/*/*/assembly_curated/repeats/*_v2.*.nonB_*.bb
 
 
-# CONTENTS 
+# # # # # TABLE OF CONTENTS 
+# - NOTES AND SOFTWARE REQUIREMENTS
+# - CREATE NON-OVERLAPPING BED FILES FROM NON-B ANNOTATION
+# - SPACER LENGTH DISTRIBUTION
+# - NON-B STATISTICS
+# - OVERLAP BETWEEN NON-B TYPES
 
 ####################### NOTES AND SOFTWARE REQUIREMENTS ######################## 
 # Some code is written to be run as parallel batch jobs on a slurm cluster for 
-# speed and efficiency. These could be run in the terminal istead by removing 
+# speed and efficiency. These could be run in the terminal instead by removing 
 # the initial "echo '#!/bin/bash" and the trailing  "| sbatch [..] "
 
 # Software used:
@@ -25,71 +30,11 @@
 # Winnowmap v2.03
 # Bedops v2.4.41
 # circos v0.69-9
+# starcode v1.4 
+# python v3.11.2
 # UCSC tools:
 #   bigWigToWig
 #   bigBedToBed
-
-
-
-# INHOUSE?
-################ TAKING OUT THE TRIPLEX SUBSET OF MIRROR REPEATS ###############
-#
-
-for hap in "pri" "alt"
-do
-  # ADD THE GFA PATH HERE
-  #nonBpath=/path/to/nonB/$hap/
-  cat ~/Documents/T2T_nonB_paper/T2T_primate_nonB/helpfiles/${hap}_species_list.txt | while read -r trivial latin filename;
-  do
-    for file in $(ls $nonBpath/$latin/*_MR.gff)
-    do
-      ls $file
-      newfile=`echo $file |sed 's/MR.gff/TRI.bed/'`
-      echo $newfile
-      grep "subset=1" $file |awk -v OFS="\t" '{s=$4-1; print $1,s,$5}' |sort -k2,2n >$newfile
-    done
-  done
-done
-
-nb="DR" #"IR" MR DR
-subset="SLS" #"CRU" #"TRI" "SLS"
-# INHOUSE PRIMARY HAPLOYPE 
- cd ~/Documents/Kaivans_annotation/non-B-DNA-Annotations
-for hap in "pri" 
-do
-  cat ~/Documents/T2T_nonB_paper/T2T_primate_nonB/helpfiles/${hap}_species_list.txt | while read -r trivial latin filename;
-  do
-    for file in $(ls $latin/*_$nb.gff)
-    do
-      ls $file
-      newfile=`echo $file |sed "s/$nb.gff/$subset.bed/"`
-      echo $newfile
-      grep "subset=1" $file |awk -v OFS="\t" '{s=$4-1; print $1,s,$5}' |sort -k2,2n >$newfile
-    done
-  done
-done
-
-# INHOUSE ALTERNATIVE HAPLOTYPE
-cd ~/Documents/nonB_annotation/output
-for hap in "alt"
-do
-  cat ~/Documents/T2T_nonB_paper/T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v siamang | while read -r trivial latin filename;
-  do
-    for file in $(ls $latin/*_$nb.gff)
-    do
-      ls $file
-      newfile=`echo $file |sed "s/$nb.gff/$subset.bed/"`
-      echo $newfile
-      grep "subset=1" $file |awk -v OFS="\t" '{s=$4-1; print $1,s,$5}' |sort -k2,2n >$newfile
-      # Merge 
-    done
-  done
-done
-
-# INHOUSE SORANG CHR18 (not needed, reruns of chr18 ha already been added above )
-grep "subset=1" sorang_pri/chr18_$nb.gff |awk -v OFS="\t" '{s=$4-1; print $1,s,$5}' |sort -k2,2n >sorang_pri/chr18_$subset.bed
-cp sorang_pri/chr18_$subset.bed ~/Documents/Kaivans_annotation/non-B-DNA-Annotations/
-
 
 ############ CREATE NON-OVERLAPPING BED FILES FROM NON-B ANNOTATION ############
 nb_path=/path/to/nonB/tracks/converted/to/bed
@@ -170,7 +115,7 @@ do
   cut -f10 non-B-DNA-Annotations/Homo_sapiens/chr*_$n.tsv |grep -v "Spacer" >spacer/$n.spacers.txt
 done
 
-# Plot distributions with T2T_primate_nonB/R/plot_fig1_spacer.R
+# Plot distributions with R/plot_figS1_spacer.R
 
 
 
@@ -371,24 +316,4 @@ do
    ' | sbatch -J $sp --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8G --time=1:00:00 
 done 
 
-
-
-
-
-# Plot with
-scripts/R/plot_fig2_upset_and_tile.R
-
-
-# INHOUSE
-################################# COMPARE WITH MOHANTY ET AL. BIORXIV 2024 
-
-cd /storage/group/kdm16/default/skm6640/work/g4set_fork/Homo_sapiens/
-
-cat nonB_annotation/human_pri/*_GQ.bed |awk '{sum+=$3-$2; n++}END{print n, sum}'
-739112 27433138
-
-cat /storage/group/kdm16/default/skm6640/work/g4set_fork/Homo_sapiens/chrG.pqsfinder.filtered.bed |awk '{sum+=$3-$2; n++}END{print n, sum}'
-769188 19899699
-
- cat nonB_annotation/human_pri/*_GQ.bed | intersectBed -a - -b <(cat /storage/group/kdm16/default/skm6640/work/g4set_fork/Homo_sapiens/chrG.pqsfinder.filtered.bed) |awk '{sum+=$3-$2; n++}END{print n, sum}'
-568692 15505883
+# Plot with R/plot_fig3_overlap.R and R/plot_figS2_overlap.R
