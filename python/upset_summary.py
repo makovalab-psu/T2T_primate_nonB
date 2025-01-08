@@ -4,6 +4,7 @@
 # upset_summary.py
 # Author: Linnea Smeds
 # Date: 13-September-2024
+# Last update: 03-January-2025, included TRI
 # Description: Goes through bedfiles of each non-B motif type (listed below)
 # adding each base to a joint matrix with the types as columns and positions 
 # as rows.
@@ -25,7 +26,7 @@ args = parser.parse_args()
 ################################################################################
 ##### Main code
 
-nonB=["APR", "DR", "GQ", "IR", "MR", "STR", "Z"]
+nonB=["APR", "DR", "GQ", "IR", "MR", "TRI", "STR", "Z"]
 
 # prepare dict with positions 
 p_dict={}

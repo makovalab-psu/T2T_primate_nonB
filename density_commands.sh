@@ -34,20 +34,20 @@ done
 # Fill windows with number of covered bases 
 # (run as one batch job per hap/sp/chrtype/nonB)
 mkdir densities
-for hap in  "alt" "pri"
+for hap in  "alt" "pri" 
 do
-  for chr in "chrX" "chrY" "autosomes" 
+  for chr in "chrX" "chrY" "autosomes"
   do
     cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |while read -r sp latin filename;
     do
-      for n in "TRI" #"APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
+      for n in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
       do      
         # One bed per sp/chrtype/nonBtype
         echo '#!/bin/bash  
           module load bedtools/2.31.0
-        rm -f densities/'${sp}'_'${hap}'/'${chr}'_'${n}'_100kb.bed
+       #rm -f densities/'${sp}'_'${hap}'/'${chr}'_'${n}'_100kb.bed
         intersectBed -wao -a ref/windows/'${sp}'_'${hap}'/'${chr}'_100k_windows.bed -b nonB_annotation/'${sp}'_'${hap}'/'${chr}'_'${n}'.bed | cut -f1,2,3,7 |awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" >densities/'${sp}'_'${hap}'/'${chr}'_'${n}'_100kb.bed 
-        '| sbatch -J $sp.X --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8G
+        '| sbatch -J $sp.$chr --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8G
       done 
     done 
   done 
@@ -55,14 +55,14 @@ done
 # Note that chrX and chrY are empty for the alternative haplotype. 
 
 # Also combine into one file per species/haplo 
-for hap in "alt" # "pri" 
+for hap in "alt" "pri" 
 do
-  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep siamang |while read -r sp latin filename;
+  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |while read -r sp latin filename;
   do
-    rm densities/${sp}_${hap}_comb_100kb.bed
+    rm -f densities/${sp}_${hap}_comb_100kb.bed
     for chr in "autosomes" "chrX" "chrY" #
     do
-      for n in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
+      for n in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
       do
         awk -v OFS="\t" -v nb=$n '{print $0,nb}' densities/${sp}_${hap}/${chr}_${n}_100kb.bed >>densities/${sp}_${hap}_comb_100kb.bed
       done
@@ -129,9 +129,10 @@ done
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # For later enrichment analysis, we need genomewide density of non-B
 # (also make files with autosomes,chrX and chrY separately)
-for hap in "pri" "alt" #
+
+for hap in "pri" #"alt" #"pri"  #
 do
-  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v human |while read -r sp latin filename;
+  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep chimp |while read -r sp latin filename;
   do
     echo ${sp}"_"$hap
     rm -f densities/${sp}_${hap}_nonB_genome_wide.txt
@@ -139,10 +140,14 @@ do
     rm -f densities/${sp}_${hap}_nonB_chrX.txt
     rm -f densities/${sp}_${hap}_nonB_chrY.txt
     totlen=`cat ref/$filename.fai | awk '{sum+=$2}END{print sum}'`
+    echo "Totlen: "$totlen
     autolen=`grep -v "chrX" ref/$filename.fai |grep -v "chrY" |grep -v "chrM"| awk '{sum+=$2}END{print sum}'`
+    echo "Autolen: "$autolen
     xlen=`grep "chrX" ref/$filename.fai | awk '{sum+=$2}END{print sum}'`
+    echo "Xlen: "$xlen
     ylen=`grep "chrY" ref/$filename.fai | awk '{sum+=$2}END{print sum}'`
-    for non_b in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
+    echo "Ylen: "$ylen
+    for non_b in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
     do
       cat nonB_annotation/${sp}_$hap/autosomes_${non_b}.bed \
       | awk -v n=$non_b -v tot=$autolen '{sum+=$3-$2}END{d=sum/tot; print n, sum, d}' >>densities/${sp}_${hap}_nonB_autosomes.txt
@@ -157,20 +162,25 @@ do
 done
 
 # Per chromosome:
+# Took ~20min per haplotype
 for hap in "pri" "alt"
 do
-    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt  |while read -r sp latin filename;
+  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |while read -r sp latin filename;
+  do
+    echo '#!/bin/bash  
+    echo "Chr NonB Bp Density" |sed "s/ /\t/g" >densities/'${sp}'_'${hap}'_nonB_per_chrom.txt
+    cat ref/'$filename'.fai |cut -f1,2 |grep -v "chrM" |while read -r chr len;
     do
-      rm -f densities/${sp}_${hap}_nonB_per_chrom.txt
-      cat ref/$filename.fai |cut -f1,2 |grep -v "chrM" |while read -r chr len;
-      do
-          for non_b in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
-          do
-              cat nonB_annotation/${sp}_$hap/*_${non_b}.bed | awk -v n=$non_b -v tot=$len -v c=$chr '($1==c){sum+=$3-$2}END{d=sum/tot; print c, n, sum, d}' >>densities/${sp}_${hap}_nonB_per_chrom.txt
-        done
+        for non_b in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
+        do
+            cat nonB_annotation/'${sp}'_'$hap'/*_${non_b}.bed | awk -v n=$non_b -v tot=$len -v c=$chr '"'"'($1==c){sum+=$3-$2}END{d=sum/tot; print c, n, sum, d}'"'"' >>densities/'${sp}'_'${hap}'_nonB_per_chrom.txt
       done
+    done
+    '| sbatch -J $sp --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8G --time=1:00:00 --partition=open
   done
 done
+
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # GC Corrected 'densities' (Divide by GC-bp instead of full length)

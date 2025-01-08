@@ -50,11 +50,12 @@ awk -v OFS="\t" '{if(/Satellite/){name=$11"_"$10}else{name=$11}; s=$6-1; print $
 cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r sp latin filename;
 do
   mkdir -p repeats/$sp/overlap
-  for chr in "autosomes" "chrX" "chrY"
+  for chr in "genome" "autosomes" "chrX" "chrY"
   do
     echo '#!/bin/bash
+    echo "Looking at '$sp' '$chr'"
     module load bedtools/2.31.0
-    for non_b in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
+    for non_b in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
     do
         intersectBed -a repeats/'$sp'/RepeatMasker.bed -b nonB_annotation/'${sp}'_pri/'${chr}'_${non_b}.bed >repeats/'$sp'/overlap/'${chr}'_${non_b}_repmask.bed
         if [[ "'$sp'" == "human" ]]
@@ -64,27 +65,8 @@ do
           intersectBed -a repeats/'$sp'/composite_repeats.bed -b nonB_annotation/'${sp}'_pri/'${chr}'_${non_b}.bed >repeats/'$sp'/overlap/'${chr}'_${non_b}_compos.bed
         fi
     done
-    '| sbatch -J $chr.$sp --ntasks=1 --cpus-per-task=1 --time=1:00:00 --partition=open
+    '| sbatch -J $chr.$sp --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8G --time=1:00:00 --partition=open
   done
-done
-
-# AND FULL GENOME COMBINED!
-cat T2T_primate_nonB/helpfiles/pri_species_list.txt |grep "gorilla" |while read -r sp latin filename;
-do
-  mkdir -p repeats/$sp/overlap
-  echo '#!/bin/bash
-  module load bedtools/2.31.0
-  for non_b in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
-  do
-      intersectBed -a repeats/'$sp'/RepeatMasker.bed -b <(cat nonB_annotation/'${sp}'_pri/autosomes_${non_b}.bed nonB_annotation/'${sp}'_pri/chrX_${non_b}.bed nonB_annotation/'${sp}'_pri/chrY_${non_b}.bed) >repeats/'${sp}'/overlap/genome_${non_b}_repmask.bed
-      if [[ "'$sp'" == "human" ]]
-      then
-        echo "only for '$sp'"
-        intersectBed -a repeats/'$sp'/new_satellites.bed -b <(cat nonB_annotation/'${sp}'_pri/autosomes_${non_b}.bed nonB_annotation/'${sp}'_pri/chrX_${non_b}.bed nonB_annotation/'${sp}'_pri/chrY_${non_b}.bed) >repeats/'$sp'/overlap/genome_${non_b}_newsat.bed
-        intersectBed -a repeats/'$sp'/composite_repeats.bed -b <(cat nonB_annotation/'${sp}'_pri/autosomes_${non_b}.bed nonB_annotation/'${sp}'_pri/chrX_${non_b}.bed nonB_annotation/'${sp}'_pri/chrY_${non_b}.bed) >repeats'/$sp'/overlap/genome_${non_b}_compos.bed
-      fi
-  done
-  '| sbatch -J $chr.$sp --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8G --time=1:00:00 --partition=open
 done
 
 
@@ -100,7 +82,7 @@ done
 sp="human"
 cat repeats/$sp/composite_repeats.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/genome_compos_lengths.txt
 cat repeats/$sp/new_satellites.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/genome_newsat_lengths.txt
-
+# Note:Composite repeat 'Charlie 5' was manually edited to Charlie 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Summarize the enrichment of each non-B motif in all repeat classes
@@ -108,7 +90,8 @@ cat repeats/$sp/new_satellites.bed |python3 T2T_primate_nonB/python/repeat_summa
 cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r sp latin filename;
 do
   echo '#!/bin/bash
-  echo "Repeat APR DR GQ IR MR STR Z" |sed "s/ /\t/g" >repeats/'$sp'_genome_repeat_enrichment.tsv
+  echo "Looking at repeats in '$sp'"
+  echo "Repeat APR DR GQ IR MR TRI STR Z" |sed "s/ /\t/g" >repeats/'$sp'_genome_repeat_enrichment.tsv
   cat repeats/'$sp'/genome_repeat_lengths.txt | while read -r rep replen;
   do
     tmp=`echo $rep`
@@ -117,18 +100,20 @@ do
     do
       d=`cat repeats/'$sp'/overlap/genome_${non_b}_repmask.bed | awk -v r=$rep -v l=$replen -v dtot=$dens '"'"'($4==r){sum+=$3-$2}END{if(l==0 || dtot==0){print "NA"} else{d=sum/l; frac=d/dtot; print frac}}'"'"'`
       tmp=`echo $tmp" "$d`
-      echo $tmp >tmp
+      echo $tmp >tmp.'$sp'
     done
-    cat tmp |sed "s/ /\t/g" >>repeats/'$sp'_genome_repeat_enrichment.tsv
+    cat tmp.'$sp' |sed "s/ /\t/g" >>repeats/'$sp'_genome_repeat_enrichment.tsv
   done
-  '| sbatch -J $sp --ntasks=1 --cpus-per-task=1 --time=1:00:00 --partition=open
+  '| sbatch -J $sp --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8G --time=1:00:00 --partition=open
 done
 
 # COMPOSITE AND NEW SATELLITES, HUMAN
+sp="human"
 for type in "compos" "newsat"
 do
   echo '#!/bin/bash
-  echo "Repeat APR DR GQ IR MR STR Z" |sed "s/ /\t/g" >repeats/'$sp'_genome_'$type'_enrichment.tsv
+  echo "Looking at repeats in "'$sp' '$type'
+  echo "Repeat APR DR GQ IR MR TRI STR Z" |sed "s/ /\t/g" >repeats/'$sp'_genome_'$type'_enrichment.tsv
   cat repeats/'$sp'/genome_'$type'_lengths.txt | while read -r rep replen;
   do
     tmp=`echo $rep`
@@ -136,9 +121,9 @@ do
     do
       d=`cat repeats/'$sp'/overlap/genome_${non_b}_'$type'.bed | awk -v r=$rep -v l=$replen -v dtot=$dens '"'"'($4==r){sum+=$3-$2}END{if(l==0 || dtot==0){print "NA"} else{d=sum/l; frac=d/dtot; print frac}}'"'"'`
       tmp=`echo $tmp" "$d`
-      echo $tmp >tmp
+      echo $tmp >tmp.'$type'
     done
-    cat tmp |sed "s/ /\t/g" >>repeats/'$sp'_genome_'$type'_enrichment.tsv
+    cat tmp.'$type' |sed "s/ /\t/g" >>repeats/'$sp'_genome_'$type'_enrichment.tsv
   done
   '| sbatch -J $type --ntasks=1 --cpus-per-task=1 --time=1:00:00 --partition=open
 done
@@ -153,7 +138,7 @@ do
 done
 
 # For non-humans, we want to merge the files
-echo "Species Repeat APR DR GQ IR MR STR Z" |sed 's/ /\t/g' >repeats/6sp_genome_repeat_enrichment_renamed.tsv
+echo "Species Repeat APR DR GQ IR MR TRI STR Z" |sed 's/ /\t/g' >repeats/6sp_genome_repeat_enrichment_renamed.tsv
 echo "Species Repeat Len" |sed 's/ /\t/g' >repeats/6sp_genome_repeat_lengths_renamed.txt
 cat species_list.txt |grep -v "human" |while read -r sp latin filename;
 do
@@ -162,7 +147,7 @@ do
 done
 
 # And merge human composite repeats and new satellites 
-echo "Type Repeat APR DR GQ IR MR STR Z" |sed 's/ /\t/g' >repeats/human_genome_compsat_enrichment.tsv
+echo "Type Repeat APR DR GQ IR MR TRI STR Z" |sed 's/ /\t/g' >repeats/human_genome_compsat_enrichment.tsv
 echo "Type Repeat Len" |sed 's/ /\t/g' >repeats/human_genome_compsat_lengths.txt
 for type in "newsat" "compos"
 do
@@ -271,7 +256,7 @@ done
 
 # Go through the bed files and calculate density and fold enrichment compared 
 # to genomewide density
-for type in "intermediate1kb" #"exactRep" "merge1kb"
+for type in "intermediate1kb" "exactRep" #"merge1kb"
 do
   echo '#!/bin/bash
     module load bedtools/2.31.0
@@ -301,7 +286,7 @@ do
 done
 
 # Repeat Fold enrichment analysis 
-for type in "intermediate1kb" #"exactRep" "merge1kb"
+for type in "intermediate1kb" "exactRep" #"merge1kb"
 do
   echo '#!/bin/bash
     module load bedtools/2.31.0
@@ -330,7 +315,7 @@ done
 
 # Use the "clean" bed files I extracted for the centromere analyis.
 module load python/3.11.2
-cat T2T_primate_nonB/helpfiles/pri_species_list.txt |grep siamang |while read -r sp latin filename;
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r sp latin filename;
 do
   cp centromeres/${sp}_pri/cenSat_shortnames.bed repeats/$sp/cenSat.bed
   cat repeats/$sp/cenSat.bed |python3 T2T_primate_nonB/python/repeat_summary.py >repeats/$sp/genome_cenSat_lengths.txt
@@ -341,7 +326,7 @@ cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r sp latin file
 do
   echo '#!/bin/bash
   module load bedtools/2.31.0
-  for non_b in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
+  for non_b in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
   do
       intersectBed -a repeats/'$sp'/cenSat.bed -b nonB_annotation/'${sp}'_pri/genome_${non_b}.bed >repeats/'${sp}'/overlap/genome_${non_b}_cenSat.bed
   done
@@ -349,10 +334,10 @@ do
 done
 
 # Calculate enrichment for the full genome
-cat T2T_primate_nonB/helpfiles/pri_species_list.txt |grep -v human |while read -r sp latin filename;
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r sp latin filename;
 do
   echo '#!/bin/bash
-  echo "Repeat APR DR GQ IR MR STR Z" |sed "s/ /\t/g" >repeats/'$sp'_genome_censat_enrichment.tsv
+  echo "Repeat APR DR GQ IR MR TRI STR Z" |sed "s/ /\t/g" >repeats/'$sp'_genome_censat_enrichment.tsv
   cat repeats/'$sp'/genome_cenSat_lengths.txt | while read -r rep replen;
   do
     tmp=`echo $rep`
@@ -369,7 +354,7 @@ do
 done
 
 # Merge
-echo "Species Repeat APR DR GQ IR MR STR Z" |sed 's/ /\t/g' >repeats/7sp_genome_censat_enrichment.tsv
+echo "Species Repeat APR DR GQ IR MR TRI STR Z" |sed 's/ /\t/g' >repeats/7sp_genome_censat_enrichment.tsv
 echo "Species Repeat Len" |sed 's/ /\t/g' >repeats/7sp_genome_censat_lengths.txt
 cat T2T_primate_nonB/helpfiles/pri_species_list.txt |while read -r sp latin filename;
 do
@@ -395,7 +380,7 @@ do
   #cut -f1,2 ref/'$filename'.fai |sort -k1,1 | complementBed -i <(sort -k1,1 -k2,2n repeats/'$sp'/RepeatMasker.bed) -g -  |grep -v "random" |grep -v "chrM"  >repeats/'$sp'/RepeatMasker_Complement.bed
   replen=`awk '"'"'{sum+=$3-$2}END{print sum}'"'"' repeats/'$sp'/RepeatMasker.bed`
   nrlen=`awk '"'"'{sum+=$3-$2}END{print sum}'"'"' repeats/'$sp'/RepeatMasker_Complement.bed`
-  for nb in "all" "APR" "DR" "GQ" "IR" "MR" "STR" "Z" 
+  for nb in "all" "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" 
   do
     rep=`intersectBed -a repeats/'$sp'/RepeatMasker.bed -b nonB_annotation/'$sp'_pri/genome_${nb}.bed  -wo | awk -v OFS="\t" -v rlen=$replen '"'"'{sum+=$8}END{dens=sum/rlen; print rlen,sum,dens}'"'"'`
     nr=`intersectBed -a repeats/'$sp'/RepeatMasker_Complement.bed -b nonB_annotation/'$sp'_pri/genome_${nb}.bed -wo | awk -v OFS="\t" -v nrlen=$nrlen '"'"'{sum+=$7}END{dens=sum/nrlen; print nrlen,sum,dens}'"'"'`
@@ -410,12 +395,13 @@ cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin fil
 do
   echo "looking at $sp"
   echo '#!/bin/bash
+  echo "looking at '$sp'"
   module load bedtools/2.31.0
   cat repeats/'$sp'/RepeatMasker.bed repeats/'$sp'/cenSat.bed repeats/'$sp'/composite_repeats.bed repeats/'$sp'/new_satellites.bed |cut -f1,2,3|sort -k1,1 -k2,2n |mergeBed -i -  >repeats/'$sp'/AllRepeats.bed
   cut -f1,2 ref/'$filename'.fai |sort -k1,1 | complementBed -i <(sort -k1,1 -k2,2n repeats/'$sp'/AllRepeats.bed) -g -  |grep -v "random" |grep -v "chrM"  >repeats/'$sp'/AllRepeats_Complement.bed
   replen=`awk '"'"'{sum+=$3-$2}END{print sum}'"'"' repeats/'$sp'/AllRepeats.bed`
   nrlen=`awk '"'"'{sum+=$3-$2}END{print sum}'"'"' repeats/'$sp'/AllRepeats_Complement.bed`
-  for nb in "all" "APR" "DR" "GQ" "IR" "MR" "STR" "Z" 
+  for nb in "all" "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" 
   do
     rep=`intersectBed -a repeats/'$sp'/AllRepeats.bed -b nonB_annotation/'$sp'_pri/genome_${nb}.bed  -wo | awk -v OFS="\t" -v rlen=$replen '"'"'{sum+=$7}END{dens=sum/rlen; print rlen,sum,dens}'"'"'`
     nr=`intersectBed -a repeats/'$sp'/AllRepeats_Complement.bed -b nonB_annotation/'$sp'_pri/genome_${nb}.bed -wo | awk -v OFS="\t" -v nrlen=$nrlen '"'"'{sum+=$7}END{dens=sum/nrlen; print nrlen,sum,dens}'"'"'`
@@ -424,12 +410,13 @@ do
     ' |sbatch -J $sp --ntasks=1 --cpus-per-task=1 --mem-per-cpu=16G --time=5:00:00
 done 
 
+
 # Calculate Fold enrichment and rearrange for supplementary table
-echo "Species APR DR STR IR MR G4 Z all" |sed 's/ /\t/g' >repeats/7sp_repeat_vs_nonrepeat_enrichment.txt
+echo "Species APR DR STR IR MR TRI G4 Z all" |sed 's/ /\t/g' >repeats/7sp_repeat_vs_nonrepeat_enrichment.txt
 cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
 do
   tmp="$sp"
-  for nb in "APR" "DR" "STR" "IR" "MR" "GQ" "Z" "all" 
+  for nb in "APR" "DR" "STR" "IR" "MR" "TRI" "GQ" "Z" "all" 
   do
     f=`awk -v s=$sp -v n=$nb '($1==s && $2==n){fold=$5/$8; print fold}' repeats/allrep_vs_nonrep_summary.txt`
     tmp=$tmp" "$f
@@ -453,9 +440,9 @@ do
   grep "Satellites" repeats/$sp/RepeatMasker.groups.bed | cat - repeats/$sp/new_satellites.bed  <(grep -v "gap" repeats/$sp/cenSat.bed ) |sort -k1,1 -k2,2n |cut -f1-3 |mergeBed -i - >repeats/$sp/GroupAnnotation/Satellites.bed
 done 
 
-cat T2T_primate_nonB/helpfiles/pri_species_list.txt |grep -v human | while read -r sp latin filename;
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
 do
-  echo "Repeat APR DR GQ IR MR STR Z" |sed 's/ /\t/g' >repeats/${sp}_group_enrichment.tsv
+  echo "Repeat APR DR GQ IR MR TRI STR Z" |sed 's/ /\t/g' >repeats/${sp}_group_enrichment.tsv
   echo '#!/bin/bash
   module load bedtools/2.31.0
   for rep in "TEs" "Satellites" "RNA" "Other"
@@ -474,7 +461,7 @@ do
 done 
 
 # Merge before plotting 
-echo "Species Repeat APR DR GQ IR MR STR Z" |sed 's/ /\t/g' >repeats/7sp_group_enrichment.tsv
+echo "Species Repeat APR DR GQ IR MR TRI STR Z" |sed 's/ /\t/g' >repeats/7sp_group_enrichment.tsv
 cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
 do
   awk -v OFS="\t" -v sp=$sp '{print sp,$0}' <(tail -n+2 repeats/${sp}_group_enrichment.tsv) >>repeats/7sp_group_enrichment.tsv

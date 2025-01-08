@@ -26,7 +26,7 @@ cat T2T_primate_nonB/helpfiles/pri_species_list.txt |grep "human" |while read -r
 do
     echo '#!/bin/bash
     module load bedtools/2.31.0
-    echo "Region Class APR DR GQ IR MR STR Z" |sed "s/ /\t/g" >functional/'${sp}'/enrichment_fullgenome.tsv
+    echo "Region Class APR DR GQ IR MR TRI STR Z" |sed "s/ /\t/g" >functional/'${sp}'/enrichment_fullgenome.tsv
     cat T2T_primate_nonB/helpfiles/functional_classes.txt |while read -r class bedfile
     do 
         echo "Looking at $class" 
@@ -39,7 +39,7 @@ do
             tmp=`echo $tmp" "$d`
             echo $tmp >tmp
         done
-        cat tmp |sed "s/ /\t/g" >>functional/'${sp}'/enrichment_fullgenome_new.tsv
+        cat tmp |sed "s/ /\t/g" >>functional/'${sp}'/enrichment_fullgenome.tsv
     done
     ' | sbatch -J $sp --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8G --time=5:00:00 --partition=open
 done

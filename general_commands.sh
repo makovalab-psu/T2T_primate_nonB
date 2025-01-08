@@ -67,13 +67,14 @@ do
     done
 done 
 
+nb_path="/storage/group/kdm16/default/shared/nonB_annotation/T2Tv2_primates/"
 # Secondary haplotype assembly 
-cat T2T_primate_nonB/helpfiles/alt_species_list.txt | while read -r sp latin filename;
+cat T2T_primate_nonB/helpfiles/alt_species_list.txt | grep siamang | while read -r sp latin filename;
 do
     echo "Creating directory for $sp.."
-   # mkdir -p nonB_annotation/${sp}_alt
+    mkdir -p nonB_annotation/${sp}_alt
      prefix=`echo $filename | sed 's/.fasta//' | sed 's/.fa//'`
-    for nb in "TRI" #"APR" "DR" "GQ" "IR" "MR" "STR" "Z"
+    for nb in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z"
     do
         grep "chrX" $nb_path/$prefix.$nb.bed |mergeBed -i - >nonB_annotation/${sp}_alt/chrX_$nb.bed
         grep "chrY" $nb_path/$prefix.$nb.bed |mergeBed -i - >nonB_annotation/${sp}_alt/chrY_$nb.bed
@@ -138,11 +139,11 @@ done
 for chr in "autosomes" "chrX" "chrY"
 do
   echo "================= $chr =================="
-  echo "species ====APR=== ===DR=== ===GQ=== ===IR=== ===MR=== ===STR=== ===Z-DNA=== === all ==="
+  echo "species ====APR=== ===DR=== ===GQ=== ===IR=== ===MR=== ===TRI=== ===STR=== ===Z-DNA=== === all ==="
   cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
   do
     out=""
-    for nb in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
+    for nb in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
     do
       tot=`grep $sp T2T_primate_nonB/helpfiles/condensed_lengths.txt |grep $chr |cut -f3 -d" "`
       nonB=`awk -v t=$tot '{sum+=$3-$2}END{frac=sum/t; mb=sum/1000000; print mb" "frac}' \
@@ -154,17 +155,17 @@ do
   done
 done
 
-# SAME BUT PRINT TO FILE 
-echo "Species Chr Type APR DR GQ IR MR STR Z all" |sed 's/ /\t/g' >nonB_annotation/7sp_summary.txt
+# SAME BUT PRINT TO FILE (added TRI, subset of MR) 
+echo "Species Chr Type APR DR GQ IR MR TRI STR Z all" |sed 's/ /\t/g' >nonB_annotation/7sp_summary.txt
 for chr in "autosomes" "chrX" "chrY"
 do
   echo "================= $chr =================="
-  echo "species ====APR=== ===DR=== ===GQ=== ===IR=== ===MR=== ===STR=== ===Z-DNA=== === all ==="
+  echo "species ====APR=== ===DR=== ===GQ=== ===IR=== ===MR=== ===TRI=== ===STR=== ===Z-DNA=== ===all==="
   cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
   do
     out1=""
     out2=""
-    for nb in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
+    for nb in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
     do
       tot=`grep $sp T2T_primate_nonB/helpfiles/condensed_lengths.txt |grep $chr |cut -f3 -d" "`
       nonB=`awk -v t=$tot '{sum+=$3-$2}END{frac=sum/t; mb=sum/1000000; print mb" "frac}' \
@@ -240,7 +241,7 @@ done
 # (67Gb, 42min for human autosomes))
 # For all species except bonobo & gorilla, I used 2 cores with 40Gb ram
 # For bonobo & gorilla I used 3 cores with 40Gb ram
-for sp in "gorilla"  #"bonobo" #"chimp" "sorang" "borang" "siamang"
+for sp in "chimp" "sorang" "borang" "siamang" #"human"
 do 
   # Needed more memory for autosomes than X and Y
   echo '#!/bin/bash      
@@ -259,24 +260,26 @@ python3 T2T_primate_nonB/python/upset_summary.py -b nonB_annotation/'$sp'_pri/au
   ' | sbatch -J $sp.X --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8G
 done
 
+
 # If there isn't enough memory to run all autosomes together, each chromosome
 # can be run separately and merged afterwards.
-for sp in "gorilla" #"bonobo" #"chimp" "sorang" "borang" "siamang"
+for sp in "gorilla" #"bonobo"
 do 
   for i in 18 #{1..23}
   do 
- #   for nb in "APR" "DR" "GQ" "IR" "MR" "STR" "Z"
- #   do
-      #grep "chr"$i"_" nonB_annotation/${sp}_pri/autosomes_$nb.bed >nonB_annotation/${sp}_pri/chr${i}_$nb.bed
+    #for nb in "TRI" #"APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z"
+    #do
+    #  grep "chr"$i"_" nonB_annotation/${sp}_pri/autosomes_$nb.bed >nonB_annotation/${sp}_pri/chr${i}_$nb.bed
     #done
-    echo '#!/bin/bash      
+    echo '#!/bin/bash
+    echo "Running upset for '$sp' chr'$i'"      
     module load python/3.11.2
     python3 T2T_primate_nonB/python/upset_summary.py -b nonB_annotation/'$sp'_pri/chr'$i'_ -o overlap/'$sp'.summary.chr'$i'.txt
-    ' | sbatch -J $sp.$i --ntasks=1 --mem-per-cpu=8G --cpus-per-task=1 --time=10:00:00 --partition=open
+    ' | sbatch -J $sp.$i --ntasks=1 --mem-per-cpu=20G --cpus-per-task=1 --time=10:00:00 --partition=open
   done 
 done 
 # Merge autosomes 
-for sp in "gorilla" "bonobo" #"chimp" "sorang" "borang" "siamang"
+for sp in "gorilla" #"bonobo"
 do 
   cat overlap/$sp.summary.chr{1..23}.txt |sort | awk -v OFS="\t" '{if(NR==1){type=$1; sum=$2}else{if($1==type){sum+=$2}else{print type,sum; type=$1; sum=$2}}}END{print type,sum}' > overlap/$sp.summary.autosomes.txt
 done 
@@ -286,7 +289,7 @@ done
 # created above, since threeway or more overlap also contributes to the pairwise
 # fraction. 
 module load bedtools/2.31.0 
-for sp in "gorilla" "bonobo" "chimp" "sorang" "borang" "siamang" #"human"
+for sp in "gorilla" "bonobo" "chimp" "sorang" "borang" "siamang" "human"
 do 
   echo '#!/bin/bash 
   module load bedtools/2.31.0 
@@ -295,16 +298,16 @@ do
   do 
     # Get the total number of bp for each type (save for later in a summary file, can be skipped if files are already generated)
     echo "#NonB bp" |sed "s/ /\t/g" >nonB_annotation/'${sp}'_pri/annotated_bp_${chr}.txt
-    for nb in "APR" "DR" "GQ" "IR" "MR" "STR" "Z"
+    for nb in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z"
     do 
       awk -v nb=$nb '"'"'{sum+=$3-$2}END{print nb"\t"sum}'"'"' nonB_annotation/'${sp}'_pri/${chr}_$nb.bed >>nonB_annotation/'${sp}'_pri/annotated_bp_${chr}.txt
     done 
   # Go through all combinations 
-    for nb in "APR" "DR" "GQ" "IR" "MR" "STR" "Z"
+    for nb in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z"
     do 
       nbbp=`grep $nb nonB_annotation/'${sp}'_pri/annotated_bp_${chr}.txt |cut -f2`
       echo "$nb has $nbbp number of bp!" 
-      for nb2 in "APR" "DR" "GQ" "IR" "MR" "STR" "Z"
+      for nb2 in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z"
       do
           if [[ $nb != $nb2 ]]
           then 

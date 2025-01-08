@@ -236,16 +236,16 @@ done
 # Calculate enrichment for each of these 
 for hap in "pri" "alt" 
 do 
-  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v human |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
   do
     for i in {1..10}
     do 
       echo '#!/bin/bash
       module load bedtools/2.31.0
-      echo "#Chr NonB NewTotBp NewNonB NewDens OldTotBp OldNonB OldDens" >new_sequence/'$sp'_'$hap'/resample.'$i'.summary.txt
+     # echo "#Chr NonB NewTotBp NewNonB NewDens OldTotBp OldNonB OldDens" >new_sequence/'$sp'_'$hap'/resample.'$i'.summary.txt
       for chr in "autosomes" "chrX" "chrY"
       do
-        for nb in "APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
+        for nb in "TRI" #"APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
         do
           new=`intersectBed -a new_sequence/'$sp'_'$hap'/resample.'$i'.$chr.unaligned.bed -b nonB_annotation/'$sp'_'$hap'/${chr}_${nb}.bed  -wao |cut -f1,2,3,7| awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" |awk -v nb=$nb '"'"'{sum_l+=$3-$2; sum_nb+=$4}END{d=sum_nb/sum_l; print nb,sum_l,sum_nb,d}'"'"'`
           old=`intersectBed -a new_sequence/'$sp'_'$hap'/resample.'$i'.$chr.aligned.bed -b nonB_annotation/'$sp'_'$hap'/${chr}_${nb}.bed -wao |cut -f1,2,3,7| awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" |awk '"'"'{sum_l+=$3-$2; sum_nb+=$4}END{d=sum_nb/sum_l; print sum_l,sum_nb,d}'"'"'`
@@ -258,9 +258,9 @@ do
 done
 
 # Table with base pairs from the subsampled regions for the statistics test 
-for hap in "pri" #"alt" 
+for hap in "pri" "alt" 
 do 
-   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep human |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
   do
     echo "Resample Chr nonB Region bp_outside_nonB bp_inside_nonB" | sed 's/ /\t/' >new_sequence/${sp}_$hap/resample.stat_table.tsv
     for i in {1..10}

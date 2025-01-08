@@ -57,11 +57,11 @@ done
 module load bedtools/2.31.0
 for hap in "pri"  "alt" 
 do
-    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep bonobo |grep -v siamang |while read -r sp latin filename;
+    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v siamang |while read -r sp latin filename;
     do
         echo '#!/bin/bash
         module load bedtools/2.31.0
-        echo "Chr APR DR GQ IR MR STR Z" |sed "s/ /\t/g" >centromeres/'$sp'_'$hap'/enrichment_per_chrom.tsv
+        echo "Chr APR DR GQ IR MR TRI STR Z" |sed "s/ /\t/g" >centromeres/'$sp'_'$hap'/enrichment_per_chrom.tsv
         for chr in $(cut -f1 centromeres/'$sp'_'$hap'/cen.bed |uniq)
         do
             c_len=`awk -v c=$chr '"'"'($1==c){sum+=$3-$2}END{print sum}'"'"' centromeres/'$sp'_'$hap'/cen.bed`
@@ -83,7 +83,7 @@ done
 # Merge the species for plotting (use only "chr*", not chr*_hap*_hsa*)
 for hap in "pri"  "alt" 
 do
-    echo "Species Chr APR DR GQ IR MR STR Z" |sed 's/ /\t/g'  >centromeres/${hap}_6sp_enrichment_merged.tsv
+    echo "Species Chr APR DR GQ IR MR TRI STR Z" |sed 's/ /\t/g'  >centromeres/${hap}_6sp_enrichment_merged.tsv
     cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v siamang |while read -r sp latin filename;
     do
         awk -v sp=$sp '(NR>1){split($1,s,"_"); $1=s[1]; print sp,$0}' centromeres/${sp}_${hap}/enrichment_per_chrom.tsv |sed 's/^ //' |sed 's/ /\t/g' >>centromeres/${hap}_6sp_enrichment_merged.tsv
@@ -122,7 +122,7 @@ done
 
 
 ##### FOR THE PAPER, CALCULATE HOW MANY CHR THAT HAS AT LEAST ONE non-B ENRICHED
-# I do this in the R script that generates the centromere figure!
+# I do this in the R scripts that generate the centromere figures!
 
 
 # ~~~~~~~~~~~~~~~~~ CENTROMERE DENSITIES INSTEAD OF ENRICHMENT ~~~~~~~~~~~~~~~~~
@@ -132,11 +132,11 @@ done
 module load bedtools/2.31.0
 for hap in "pri" "alt" 
 do
-    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v bonobo |grep -v siamang |while read -r sp latin filename;
+    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v siamang |while read -r sp latin filename;
     do
         echo '#!/bin/bash
         module load bedtools/2.31.0
-        echo "Chr APR DR GQ IR MR STR Z" |sed "s/ /\t/g" >centromeres/'$sp'_'$hap'/density_per_chrom.tsv
+        echo "Chr APR DR GQ IR MR TRI STR Z" |sed "s/ /\t/g" >centromeres/'$sp'_'$hap'/density_per_chrom.tsv
         for chr in $(cut -f1 centromeres/'$sp'_'$hap'/cen.bed |uniq)
         do
             c_len=`awk -v c=$chr '"'"'($1==c){sum+=$3-$2}END{print sum}'"'"' centromeres/'$sp'_'$hap'/cen.bed`
@@ -193,13 +193,14 @@ done
 # windows to be as small as 1M (if this is smaller than the centromere size). 
 for hap in "alt" "pri" 
 do
-    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep "gorilla" |grep -v siamang |while read -r sp latin filename;
+    cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v siamang |while read -r sp latin filename;
     do
         mkdir -p centromeres/${sp}_$hap/windows/
         
         for chr in $(cut -f1 centromeres/${sp}_$hap/cen.bed |uniq)
         do
             echo '#!/bin/bash
+            echo "Looking at '$sp' and '$chr'"
             module load bedtools/2.31.0
             c_len=`awk -v c='$chr' '"'"'($1==c){sum+=$3-$2}END{print sum}'"'"' centromeres/'${sp}'_'$hap'/cen.bed`
             chrlen=`awk -v c='$chr' '"'"'($1==c){print $2}'"'"' ref/'$filename'.fai`
@@ -209,12 +210,12 @@ do
             then
               echo "For '$chr', there will be less than 120 nonovl windows"
               slide=`echo "("$chrlen"-"$c_len")/120"|bc`
- #             bedtools makewindows -g <(awk -v c='$chr' '"'"'(c==$1){print}'"'"' ref/'$filename'.fai) -s $slide -w $c_len |subtractBed -a - -b centromeres/'${sp}'_'$hap'/cen.merged.bed |awk -v min=$minsize -v clen=$c_len '"'"'($3-$2>min || $3-$2==clen){print}'"'"' |shuf -n 100 |sort -k2,2n >centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.bed
+              bedtools makewindows -g <(awk -v c='$chr' '"'"'(c==$1){print}'"'"' ref/'$filename'.fai) -s $slide -w $c_len |subtractBed -a - -b centromeres/'${sp}'_'$hap'/cen.merged.bed |awk -v min=$minsize -v clen=$c_len '"'"'($3-$2>min || $3-$2==clen){print}'"'"' |shuf -n 100 |sort -k2,2n >centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.bed
             else 
               echo "For '$chr', there will be more than 120 nonovl windows"
-  #            bedtools makewindows -g <(awk -v c='$chr' '"'"'(c==$1){print}'"'"' ref/'$filename'.fai) -w $c_len |subtractBed -a - -b centromeres/'${sp}'_'$hap'/cen.merged.bed |awk -v min=$minsize -v clen=$c_len '"'"'($3-$2>min || $3-$2==clen){print}'"'"' |shuf -n 100 |sort -k2,2n >centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.bed
+              bedtools makewindows -g <(awk -v c='$chr' '"'"'(c==$1){print}'"'"' ref/'$filename'.fai) -w $c_len |subtractBed -a - -b centromeres/'${sp}'_'$hap'/cen.merged.bed |awk -v min=$minsize -v clen=$c_len '"'"'($3-$2>min || $3-$2==clen){print}'"'"' |shuf -n 100 |sort -k2,2n >centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.bed
             fi
-   #         bedtools nuc -fi ref/assemblies/'$filename' -bed centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.bed >centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.with_GC.bed
+            bedtools nuc -fi ref/assemblies/'$filename' -bed centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.bed >centromeres/'${sp}'_'$hap'/windows/'$chr'.exclCen.with_GC.bed
             rm -f centromeres/'${sp}'_'$hap'/windows/'$chr'.100rand.enrichment.tsv
             tmp="'$chr'"
             while read line
@@ -222,7 +223,7 @@ do
               cat densities/'${sp}'_'${hap}'_nonB_genome_wide.txt |grep -v "all" | while read -r non_b tot dens;
               do
                   echo $line |sed "s/ /\t/g" >tmp.$SLURM_JOB_ID.bed
-                  d=`intersectBed -a tmp.$SLURM_JOB_ID.bed -b nonB_annotation/'$sp'_'$hap'/genome_${non_b}.bed -wo |awk -v l=$c_len -v dtot=$dens '"'"'{sum+=$8}END{d=sum/l; frac=d/dtot; print frac}'"'"'`
+                  d=`intersectBed -a tmp.$SLURM_JOB_ID.bed -b nonB_annotation/'$sp'_'$hap'/genome_${non_b}.bed -wo |awk -v l=$c_len -v dtot=$dens '"'"'{sum+=$7}END{d=sum/l; frac=d/dtot; print frac}'"'"'`
                   tmp=`echo $tmp" "$d`
                   echo $tmp >tmp.$SLURM_JOB_ID
               done
@@ -233,14 +234,15 @@ do
     done 
 done 
 
+
 # Merge background densities and GC 
 for hap in "pri"  "alt" 
 do
-  echo "Window Species Chr APR DR GQ IR MR STR Z" |sed 's/ /\t/g'  >centromeres/${hap}_6sp_background_enrichment_merged.tsv
+  echo "Window Species Chr APR DR GQ IR MR TRI STR Z" |sed 's/ /\t/g'  >centromeres/${hap}_6sp_background_enrichment_merged.tsv
   echo "Window Species Chr GCcont" |sed 's/ /\t/g'  >centromeres/${hap}_6sp_background_GCcont_merged.tsv
   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v siamang |while read -r sp latin filename;
   do
-    echo "Window Chr APR DR GQ IR MR STR Z" |sed 's/ /\t/g' >centromeres/${sp}_$hap/AllChr.100rand.enrichment.tsv
+    echo "Window Chr APR DR GQ IR MR TRI STR Z" |sed 's/ /\t/g' >centromeres/${sp}_$hap/AllChr.100rand.enrichment.tsv
     for file in $(ls centromeres/${sp}_$hap/windows/chr*.100rand.enrichment.tsv)
     do
       awk '{print NR,$0}' $file |sed 's/ /\t/g' >>centromeres/${sp}_$hap/AllChr.100rand.enrichment.tsv
@@ -407,7 +409,7 @@ do
         do
             echo '#!/bin/bash
             module load bedtools/2.31.0
-            echo "Chr APR DR GQ IR MR STR Z" |sed "s/ /\t/g" >centromeres/'$sp'_'$hap'/'$flank'.enrichment_per_chrom.tsv
+            echo "Chr APR DR GQ IR MR TRI STR Z" |sed "s/ /\t/g" >centromeres/'$sp'_'$hap'/'$flank'.enrichment_per_chrom.tsv
             for chr in $(cut -f1 centromeres/'$sp'_'$hap'/cen.'$flank'.bed |uniq)
             do
                 c_len=`awk -v c=$chr '"'"'($1==c){sum+=$3-$2}END{print sum}'"'"' centromeres/'$sp'_'$hap'/cen.'$flank'.bed`
@@ -431,7 +433,7 @@ for flank in "upstream1Mb" "downstream1Mb"  #"q_excl1Mbflank" "p_excl1Mbflank" #
 do 
     for hap in "pri"  "alt" 
     do
-        echo "Species Chr APR DR GQ IR MR STR Z" |sed 's/ /\t/g'  >centromeres/${hap}_6sp_${flank}_enrichment_merged.tsv
+        echo "Species Chr APR DR GQ IR MR TRI STR Z" |sed 's/ /\t/g'  >centromeres/${hap}_6sp_${flank}_enrichment_merged.tsv
         cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v siamang |while read -r sp latin filename;
         do
             awk -v sp=$sp '(NR>1){split($1,s,"_"); $1=s[1]; print sp,$0}' centromeres/${sp}_${hap}/${flank}.enrichment_per_chrom.tsv |sed 's/^ //' |sed 's/ /\t/g' >>centromeres/${hap}_6sp_${flank}_enrichment_merged.tsv
