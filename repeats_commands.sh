@@ -367,6 +367,7 @@ done
 
 ################################################################################
 # Check enrichment in repeats vs not repeats (all non-B combined) for main text
+# and Table 2
 
 # ONLY REPEATMASKER FILES:
 # Calculate non-B density inside and outside repeats sequence
@@ -411,7 +412,7 @@ do
 done 
 
 
-# Calculate Fold enrichment and rearrange for supplementary table
+# Calculate Fold enrichment and rearrange for Table 2
 echo "Species APR DR STR IR MR TRI G4 Z all" |sed 's/ /\t/g' >repeats/7sp_repeat_vs_nonrepeat_enrichment.txt
 cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
 do
@@ -460,7 +461,7 @@ do
   ' |sbatch -J $sp --ntasks=1 --cpus-per-task=1 --mem-per-cpu=8G --time=1:00:00
 done 
 
-# Merge before plotting 
+# Merge before plotting (This data is also presented in Table S2)
 echo "Species Repeat APR DR GQ IR MR TRI STR Z" |sed 's/ /\t/g' >repeats/7sp_group_enrichment.tsv
 cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
 do

@@ -177,19 +177,20 @@ do
     echo "looking at $sp"
     echo '#!/bin/bash
     module load bedtools/2.31.0
-    echo "#Chr NonB NewTotBp NewNonB NewDens OldTotBp OldNonB OldDens" >new_sequence/'$sp'_'$hap'/summary_with_tri.txt
+    echo "#Chr NonB NewTotBp NewNonB NewDens OldTotBp OldNonB OldDens" >new_sequence/'$sp'_'$hap'/summary.txt
     for chr in "autosomes" "chrX" "chrY"
       do
-      for nb in "TRI" #"APR" "DR" "GQ" "IR" "MR" "STR" "Z" "all"
+      for nb in "APR" "DR" "STR" "IR" "MR" "TRI" "GQ" "Z" "all"
       do
         new=`intersectBed -a new_sequence/'$sp'_'$hap'/$chr.unaligned.bed -b nonB_annotation/'$sp'_'$hap'/${chr}_${nb}.bed  -wao |cut -f1,2,3,7| awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" |awk -v nb=$nb '"'"'{sum_l+=$3-$2; sum_nb+=$4}END{d=sum_nb/sum_l; print nb,sum_l,sum_nb,d}'"'"'`
         old=`intersectBed -a new_sequence/'$sp'_'$hap'/$chr.aligned.bed -b nonB_annotation/'$sp'_'$hap'/${chr}_${nb}.bed -wao |cut -f1,2,3,7| awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" |awk '"'"'{sum_l+=$3-$2; sum_nb+=$4}END{d=sum_nb/sum_l; print sum_l,sum_nb,d}'"'"'`
-        echo $chr" "$new" "$old >>new_sequence/'$sp'_'$hap'/summary_with_tri.txt
+        echo $chr" "$new" "$old >>new_sequence/'$sp'_'$hap'/summary.txt
       done 
     done
      ' |sbatch -J $hap.$sp --ntasks=1 --cpus-per-task=1 --time=1:00:00 --partition=open
   done 
 done
+
 
 # Calculate enrichment for autosomes (as in Yoo et al)
 for hap in "pri" "alt" 
@@ -197,8 +198,7 @@ do
   echo "Species Non-B Enrichment" | sed 's/ /\t/g' >new_sequence/${hap}_autosomal_enrichment.tsv 
   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
   do
-    # If TRI is in a different file, combine
-    cat new_sequence/${sp}_$hap/summary.txt new_sequence/${sp}_$hap/summary_with_tri.txt  |grep "autosomes" |awk -v OFS="\t" -v sp=$sp '{fold=$5/$8; print sp,$2,fold}' >>new_sequence/${hap}_autosomal_enrichment.tsv  
+    cat new_sequence/${sp}_$hap/summary.txt |grep "autosomes" |awk -v OFS="\t" -v sp=$sp '{fold=$5/$8; print sp,$2,fold}' >>new_sequence/${hap}_autosomal_enrichment.tsv  
   done 
 done
 
@@ -206,7 +206,7 @@ done
 # Make a table with base pairs in and outside for statistic tests
 for hap in "pri" "alt" 
 do 
-   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep -v human |grep -v "borang" |grep -v siamang | while read -r sp latin filename;
+   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt | grep -v "borang" |grep -v siamang | while read -r sp latin filename;
   do
     echo "Chr nonB Region bp_outside_nonB bp_inside_nonB" | sed 's/ /\t/' >new_sequence/${sp}_$hap/stat_table.tsv
     awk '(NR>1){out_new=$3-$4; out_old=$6-$7; print $1,$2,"New",out_new,$4,"\n",$1,$2,"Old",out_old,$7}' new_sequence/${sp}_$hap/summary.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/${sp}_$hap/stat_table.tsv
@@ -268,6 +268,19 @@ do
       awk -v i=$i '(NR>1){out_new=$3-$4; out_old=$6-$7; print i,$1,$2,"New",out_new,$4,"\n",i,$1,$2,"Old",out_old,$7}' new_sequence/${sp}_$hap/resample.$i.summary.txt |sed 's/^ //' |sed 's/ /\t/g' >>new_sequence/${sp}_$hap/resample.stat_table.tsv
     done
   done 
+done 
+
+# Numbers for Table 1
+echo "Chr APR DR IR MR TRI G4 STR Z all" |sed 's/ /\t/g'
+for chr in "autosomes" "chrX" "chrY"
+do
+  tmp="$chr"
+  for nb in "APR" "DR"  "STR" "IR" "MR" "TRI" "GQ" "Z" "all"
+  do
+    fold=`grep $chr new_sequence/human_pri/summary.txt |grep $nb |awk '{fold=$5/$8; print fold}'`
+    tmp="$tmp $fold"
+  done 
+  echo $tmp |sed 's/ /\t/g'
 done 
 
 # Stats for Table 1 is calculated in R, using the script    

@@ -71,7 +71,7 @@ do
 done
        
 # For plotting 6 species into one single plot, merge the data:
-for hap in "pri" "alt" #
+for hap in "pri" "alt" 
 do
   rm densities/${hap}_6sp_lengths.txt
   rm densities/${hap}_6sp_centromeres.txt
@@ -96,7 +96,7 @@ done
 module load bedtools/2.31.0
 for hap in "pri" "alt" 
 do
-  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep "human" |while read -r sp latin filename;
+  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |while read -r sp latin filename;
   do
     bedtools nuc -fi ref/assemblies/$filename -bed ref/windows/${sp}_$hap/all_100k_windows.bed >ref/windows/${sp}_$hap/all_100k_windows.withGC.bed
     bedtools nuc -fi ref/assemblies/$filename -bed ref/windows/${sp}_$hap/all_1Mb_windows.bed >ref/windows/${sp}_$hap/all_1Mb_windows.withGC.bed
@@ -111,12 +111,12 @@ done
 
 for hap in "pri" "alt" 
 do
-  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep "human" |while read -r sp latin filename;
+  cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |while read -r sp latin filename;
   do
     for size in "1Mb" "5Mb"
     do
       echo "Chr Start Stop GCcont nonB_count nonB" |sed 's/ /\t/g' >densities/${sp}_${hap}_nonB_GC.$size.bed
-      for n in "APR" "DR" "GQ" "IR" "MR" "STR" "Z"
+      for n in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z"
         do
           intersectBed -a <(cut -f1,2,3,5 ref/windows/${sp}_$hap/all_${size}_windows.withGC.bed) -b <(cat densities/${sp}_$hap/autosomes_${n}_100kb.bed densities/human_pri/chrX_${n}_100kb.bed densities/${sp}_$hap/chrY_${n}_100kb.bed) -wo |awk -v OFS="\t" -v nb=$n '{if(NR==1){chr=$1; start=$2; end=$3; gc=$4; sum=$8}else{if(chr==$1 && start==$2){sum+=$8}else{print chr,start,end,gc,sum,nb; chr=$1; start=$2; end=$3; gc=$4; sum=$8}}}END{print chr,start,end,gc,sum,nb}' >densities/${sp}_$hap/genome_${n}_${size}.withGG.bed
           cat densities/${sp}_$hap/genome_${n}_${size}.withGG.bed >>densities/${sp}_${hap}_nonB_GC.$size.bed
@@ -130,7 +130,7 @@ done
 # For later enrichment analysis, we need genomewide density of non-B
 # (also make files with autosomes,chrX and chrY separately)
 
-for hap in "pri" #"alt" #"pri"  #
+for hap in "pri" "alt"
 do
   cat T2T_primate_nonB/helpfiles/${hap}_species_list.txt |grep chimp |while read -r sp latin filename;
   do
