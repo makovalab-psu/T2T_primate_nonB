@@ -35,6 +35,7 @@
 # UCSC tools:
 #   bigWigToWig
 #   bigBedToBed
+#   liftOver
 
 ############ CREATE NON-OVERLAPPING BED FILES FROM NON-B ANNOTATION ############
 nb_path=/path/to/nonB/tracks/converted/to/bed
@@ -261,27 +262,6 @@ done
 
 
 
-    out1=""
-    out2=""
-    for nb in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
-    do
-      tot=`grep $sp T2T_primate_nonB/helpfiles/condensed_lengths.txt |grep $chr |cut -f3 -d" "`
-      nonB=`awk -v t=$tot '{sum+=$3-$2}END{frac=sum/t; mb=sum/1000000; print mb" "frac}' \
-      nonB_annotation/${sp}_pri/${chr}_$nb.bed`
-      nonB_Mb=`echo $nonB |cut -f1 -d" "`
-      nonB_frac=`echo $nonB |cut -f2 -d" "`
-      tmp1=$out1" "$nonB_Mb
-      tmp2=$out2" "$nonB_frac
-      out1=$tmp1
-      out2=$tmp2
-    done
-    echo $sp" "$chr" Mb "$out1 |sed 's/ /\t/g' >>nonB_annotation/7sp_summary.txt
-    echo $sp" "$chr" frac "$out2 |sed 's/ /\t/g' >>nonB_annotation/7sp_summary.txt
-  done
-done
-
-
-
 ######################### OVERLAP BETWEEN NON-B TYPES ##########################
 # Check overlap between all non-B types and visulize with an upset plot
 # This analysis is run on the primary haplotype ONLY
@@ -390,5 +370,5 @@ intersectBed -a test_imotif/Human_chr1.IM.bed -b nonB_annotation/human_pri/genom
 # 35909/35993=0.998 => Well over 99%! It doesn't make sense to add i-motifs as 
 # a separate category in the paper.
 
-
+ 
 
