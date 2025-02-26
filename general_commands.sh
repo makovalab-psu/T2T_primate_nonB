@@ -17,6 +17,7 @@
 # - SPACER LENGTH DISTRIBUTION
 # - NON-B STATISTICS
 # - OVERLAP BETWEEN NON-B TYPES
+# - TESTING I-MOTIF SEARCH WITH IM-SEEKER
 
 ####################### NOTES AND SOFTWARE REQUIREMENTS ######################## 
 # Some code is written to be run as parallel batch jobs on a slurm cluster for 
