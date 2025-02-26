@@ -210,8 +210,6 @@ do
 done
 
 
-
-
 # NOT ADDED TO THE PAPER 
 # Detailed per chromosome statistics for each species
 cat T2T_primate_nonB/helpfiles/pri_species_list.txt |grep "chimp" | while read -r sp latin filename;
@@ -231,6 +229,57 @@ do
     echo $chr" "$out
   done
 done
+
+
+# TABLE WITH TOTAL MOTIF NUMBER AND MEDIAN AND LARGEST MOTIF FOR EACH SPECIES 
+# (Data is shown for the primary haplotypes)
+echo "Species Type APR DR GQ IR MR TRI STR Z" |sed 's/ /\t/g' >nonB_annotation/7sp_length_and_number.txt
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
+do
+  prefix=`echo $filename | sed 's/.fasta//' | sed 's/.fa//'`
+  echo $prefix 
+  out1="$sp Total"
+  out2="$sp Median"
+  out3="$sp Largest"
+  for nb in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z"
+  do
+    stats=`python3 T2T_primate_nonB/python/stats_from_bed.py -b ../../shared/nonB_annotation/T2Tv2_primates/$prefix.$nb.bed -p all`
+    tot=`echo $stats |cut -f1 -d" "`
+    median=`echo $stats |cut -f2 -d" "` 
+    largest=`echo $stats |cut -f5 -d" "`
+    tmp1=$out1" "$tot
+    tmp2=$out2" "$median
+    tmp3=$out3" "$largest
+    out1=$tmp1
+    out2=$tmp2
+    out3=$tmp3
+  done 
+  echo $out1 |sed 's/ /\t/g' >>nonB_annotation/7sp_length_and_number.txt
+  echo $out2 |sed 's/ /\t/g' >>nonB_annotation/7sp_length_and_number.txt
+  echo $out3 |sed 's/ /\t/g' >>nonB_annotation/7sp_length_and_number.txt
+done 
+
+
+
+    out1=""
+    out2=""
+    for nb in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
+    do
+      tot=`grep $sp T2T_primate_nonB/helpfiles/condensed_lengths.txt |grep $chr |cut -f3 -d" "`
+      nonB=`awk -v t=$tot '{sum+=$3-$2}END{frac=sum/t; mb=sum/1000000; print mb" "frac}' \
+      nonB_annotation/${sp}_pri/${chr}_$nb.bed`
+      nonB_Mb=`echo $nonB |cut -f1 -d" "`
+      nonB_frac=`echo $nonB |cut -f2 -d" "`
+      tmp1=$out1" "$nonB_Mb
+      tmp2=$out2" "$nonB_frac
+      out1=$tmp1
+      out2=$tmp2
+    done
+    echo $sp" "$chr" Mb "$out1 |sed 's/ /\t/g' >>nonB_annotation/7sp_summary.txt
+    echo $sp" "$chr" frac "$out2 |sed 's/ /\t/g' >>nonB_annotation/7sp_summary.txt
+  done
+done
+
 
 
 ######################### OVERLAP BETWEEN NON-B TYPES ##########################
@@ -320,3 +369,26 @@ do
 done 
 
 # Plot with R/plot_fig3_overlap.R and R/plot_figS2_overlap.R
+
+
+##################### TESTING I-MOTIF SEARCH WITH IM-SEEKER ####################
+# Test to see if there is a point searching for i-motifs in addition to G4.
+# IM seeker is a web based tools so I started by testing it on human chr1 
+# (uploaded fasta to https://im-seeker.org/predict and downloaded the results)
+
+mkdir test_imotif
+# Convert the csv to bed format
+cut -f2,3,4 -d"," ~/Downloads/f32f9f55-ddd1-42fb-b7b8-583f5fbe7b72_imotif_prediction.csv |sed 's/,/\t/g' |tail -n+2 |awk -v OFS="\t" '{$2=$2-1; print}' >test_imotif/Human_chr1.IM.bed
+
+# Number of i-motifs found:
+wc test_imotif/Human_chr1.IM.bed
+#   35993  107979  847167 test_imotif/Human_chr1.IM.bed
+
+# Number of i-motifs that overlap with G4 annotations
+intersectBed -a test_imotif/Human_chr1.IM.bed -b nonB_annotation/human_pri/genome_GQ.bed |uniq |wc
+#   35909  107727  846203
+# 35909/35993=0.998 => Well over 99%! It doesn't make sense to add i-motifs as 
+# a separate category in the paper.
+
+
+
