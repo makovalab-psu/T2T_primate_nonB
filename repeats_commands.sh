@@ -159,9 +159,9 @@ done
 # Plot main figure (human, need to first generate methylation data)
 Rscript R/plot_fig6ABC_repeats_methylation.R
 # Plot supplementary figure (other species)
-Rscript R/plot_figS9_enrichment_repeats.R
+Rscript R/plot_figS13_enrichment_repeats.R
 # Plot supplementary figure (new satellites and composite repeats)
-Rscript R/plot_figS8_enrichment_compsat_human.R
+Rscript R/plot_figS12_enrichment_compsat_human.R
 
 
 
@@ -362,7 +362,7 @@ do
    awk -v sp=$sp '{print sp,$0}' repeats/${sp}/genome_cenSat_lengths.txt |sed 's/^ //' |sed 's/ /\t/g' >>repeats/7sp_genome_censat_lengths.txt
 done
 
-# Plot censat enrichment with R/plot_figS6_enrichment_censat.R
+# Plot censat enrichment with R/plot_figS8_enrichment_censat.R
 
 
 ################################################################################
@@ -390,7 +390,8 @@ do
     ' |sbatch -J $sp --ntasks=1 --cpus-per-task=1 --mem-per-cpu=16G --time=1:00:00 
 done 
 
-# COMBINED (this is what we used):
+# COMBINED (this is what we used for the paper):
+# Numbers are also used to calculate statistics for Table 2
 echo "Species NonB RepTotBp RepNonB RepDens NRTotBp NRNonB NRDens" |sed 's/ /\t/g' >repeats/allrep_vs_nonrep_summary.txt
 cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
 do
@@ -425,6 +426,125 @@ do
   echo $tmp >>repeats/7sp_repeat_vs_nonrepeat_enrichment.txt
 done 
 
+# Make contigency table for nonB in repeats vs non-repeats (to use for stats 
+# tests in Table 2)
+echo "Species NonB Type Outside Inside" |sed 's/ /\t/g' >repeats/7sp_repeat_vs_nonrepeat_contingency.txt
+awk -v OFS="\t" '(NR>1){outsideR=$3-$4; outsideNR=$6-$7; print $1,$2,"Repeats",outsideR,$4,"\n"$1,$2,"Non_rep",outsideNR,$7}' repeats/allrep_vs_nonrep_summary.txt >>repeats/7sp_repeat_vs_nonrepeat_contingency.txt
+
+
+### RESAMPLING FOR STATISTICS TESTS
+# Have tried resampling half the data, and everything is still significant.
+# Tried 10%: only APR got three unsignificant results (the ones with the smallest numbers)
+# Subsample repeats and non-repeats (take a random subset of the regions from each file) and recalculate statistics
+# Tried 50%, 10%, 5%, and 1% of the data. 
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt| while read -r sp latin filename;
+do
+  mkdir -p repeats/$sp/resample/
+  echo "looking at $sp"
+  subset="10perc"
+  rnum=`awk '{}END{num=int(NR/2); print num}' repeats/$sp/AllRepeats.bed`
+  nrnum=`awk '{}END{num=int(NR/2); print num}' repeats/$sp/AllRepeats_Complement.bed`
+  # Subsample the sequences 100 times 
+  for i in {1..100}
+  do
+    echo '#!/bin/bash
+    module load bedtools/2.31.0
+    shuf -n '$rnum' repeats/'$sp'/AllRepeats.bed |sort -k1,1 -k2,2n >repeats/'$sp'/resample/Resamp.'$subset'.'$i'.R.bed
+    shuf -n '$nrnum' repeats/'$sp'/AllRepeats_Complement.bed |sort -k1,1 -k2,2n >repeats/'$sp'/resample/Resamp.'$subset'.'$i'.NR.bed
+      ' |sbatch -J $i.$sp -o slurm-10perc-$sp-$i.%j.out --requeue --ntasks=1 --mem-per-cpu=1G --cpus-per-task=1 --time=1:00:00 --partition=open
+  done
+done 
+
+
+# Calculate enrichment for each of these 
+# --mem-per-cpu=8G for gorilla, 4G for the rest
+cat T2T_primate_nonB/helpfiles/pri_species_list.txt |grep -v gorilla| while read -r sp latin filename;
+do
+  for subset in "50perc" #"10perc" #"5perc" "1perc"
+  do 
+    for i in {1..0}
+    do 
+      echo '#!/bin/bash
+      module load bedtools/2.31.0
+      echo "Species NonB RepTotBp RepNonB RepDens NRTotBp NRNonB NRDens" >repeats/'$sp'/resample/'$subset'.'$i'.summary.txt
+      for nb in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
+      do
+        new=`intersectBed -a repeats/'$sp'/resample/Resamp.'$subset'.'$i'.R.bed -b nonB_annotation/'$sp'_pri/genome_${nb}.bed  -wao |cut -f1,2,3,7| awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" |awk -v nb=$nb '"'"'{sum_l+=$3-$2; sum_nb+=$4}END{d=sum_nb/sum_l; print nb,sum_l,sum_nb,d}'"'"'`
+        old=`intersectBed -a repeats/'$sp'/resample/Resamp.'$subset'.'$i'.NR.bed -b nonB_annotation/'$sp'_pri/genome_${nb}.bed -wao |cut -f1,2,3,7| awk -v OFS="\t" '"'"'{if(NR==0){chr=$1; s=$2; e=$3; sum=$4}else{if($1==chr && $2==s){sum+=$4}else{print chr,s,e,sum; chr=$1; s=$2; e=$3; sum=$4}}}END{print chr,s,e,sum}'"'"' | sed "/^\s*$/d" |awk '"'"'{sum_l+=$3-$2; sum_nb+=$4}END{d=sum_nb/sum_l; print sum_l,sum_nb,d}'"'"'`
+        echo '$sp'" "$new" "$old >>repeats/'$sp'/resample/'$subset'.'$i'.summary.txt
+      done 
+      ' |sbatch -J $sp.$i -o slurm-$subset-$sp-$i.%j.out --requeue --ntasks=1 --cpus-per-task=1 --mem-per-cpu=4G --time=1:00:00 --partition=open
+    done   
+  done
+done
+
+
+# Table with base pairs from the subsampled regions for the statistics test 
+for subset in "10perc" #"50perc" #"5perc" "1perc"
+do 
+  echo "Resample Species nonB Region bp_outside_nonB bp_inside_nonB" | sed 's/ /\t/' >repeats/resample.$subset.stat_table.tsv
+  cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
+  do
+    for i in {1..100}
+    do 
+      awk -v i=$i '(NR>1){out_new=$3-$4; out_old=$6-$7; print i,$1,$2,"Repeat",out_new,$4,"\n",i,$1,$2,"Non_rep",out_old,$7}' repeats/$sp/resample/$subset.$i.summary.txt |sed 's/^ //' |sed 's/ /\t/g' >>repeats/resample.$subset.stat_table.tsv
+    done
+  done 
+done 
+
+# Tested significance with the script R/chisquare_test_for_table2.R
+# Even when using subsamples as small as 1%, essentially all comparisons were 
+# significant. Hence we decided to go for a bootstrap appraoch instead, to see
+# if the variance of each measurement overlaps with 1 or not. 
+for subset in "50perc" #"10perc" #"5perc" "1perc"
+do 
+  echo "Resample Species nonB Enrichment" | sed 's/ /\t/' >repeats/resample.$subset.enrichment_table.tsv
+  cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
+  do
+    for i in {1..20}
+    do 
+      awk -v i=$i '(NR>1){enrich=$5/$8; print i,$1,$2,enrich}' repeats/$sp/resample/$subset.$i.summary.txt |sed 's/^ //' |sed 's/ /\t/g' >>repeats/resample.$subset.enrichment_table.tsv
+    done
+  done 
+done
+
+# Make a table similar to Table 2 and mark if there is a significant enrichment
+# or depletion. For the 100 runs, remove the two extremes on each side
+for subset in "10perc" #"50perc" #"5perc" "1perc"
+do 
+  echo "Species APR DR GQ IR MR TRI STR Z all" |sed 's/ /\t/g' >repeats/resample.$subset.100rep.significance.txt
+  cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
+  do
+    tmp="$sp"
+    for nb in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
+    do
+      val=`grep $sp repeats/resample.$subset.enrichment_table.tsv |grep $nb |sort -k4,4n |tail -n+3 |head -n96 |awk -v dep=0 -v enr=0 '{if($4>1){enr++}else{dep++}}END{if(enr==0 && dep>0){print "DPL"}else if(enr>0 && dep==0){print "ENR"}else{print "BOTH"}}'`
+      tmp=$tmp" "$val
+    done 
+    echo $tmp |sed 's/ /\t/g' >>repeats/resample.$subset.100rep.significance.txt
+  done 
+done 
+
+# Check smaller subset, only first 20 subsamples 
+for subset in "50perc"  "10perc" 
+do 
+  echo "Species APR DR GQ IR MR TRI STR Z all" |sed 's/ /\t/g' >repeats/resample.$subset.20rep.significance.txt
+  cat T2T_primate_nonB/helpfiles/pri_species_list.txt | while read -r sp latin filename;
+  do
+    tmp="$sp"
+    for nb in "APR" "DR" "GQ" "IR" "MR" "TRI" "STR" "Z" "all"
+    do
+      val=`grep $sp repeats/resample.$subset.enrichment_table.tsv |grep $nb |awk -v dep=0 -v enr=0 '($1<21){if($4>1){enr++}else{dep++}}END{if(enr==0 && dep>0){print "DPL"}else if(enr>0 && dep==0){print "ENR"}else{print "BOTH"}}'`
+      tmp=$tmp" "$val
+    done 
+    echo $tmp |sed 's/ /\t/g' >>repeats/resample.$subset.20rep.significance.txt
+  done 
+done 
+
+
+
+
+################################################################################
 # Do Enrichment analysis for the different TYPES of repeats: 
 # TE, Satellite, RNA, Other
 
@@ -468,4 +588,6 @@ do
   awk -v OFS="\t" -v sp=$sp '{print sp,$0}' <(tail -n+2 repeats/${sp}_group_enrichment.tsv) >>repeats/7sp_group_enrichment.tsv
 done 
 
-# Plot with R/plot_fig6ABC_repeats_methylation.R (part B)
+# Plot main figure (human, need to first generate methylation data)
+Rscript R/plot_fig6ABC_repeats_methylation.R
+
