@@ -157,7 +157,7 @@ do
 done
 
 
-# Plot with R/plot_fig10_functional_enrichment.R
+# Plot with R/plot_fig10_functional_enrichment_errorBars.R
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
