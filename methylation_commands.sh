@@ -284,4 +284,205 @@ do
 done
 
 # Plot methylation score and quadron score distribution 
-# plot_FigS17_methylation_LSAU.R 
+# plot_FigS2_methylation_LSAU.R 
+
+
+###############################################################################
+# TRY INCORPORATING OTHER EXPERIMENTAL DATA, BG PEAKS FROM HU ET AL. 2021
+
+mkdir G4peaks
+cd G4peaks
+
+# Download the data from
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE181373
+
+
+# Translate peaks from hg38 to chm13
+~/software/liftOver GSE181373_K562_100k_bg4_bulk_1000.bio.bed ~/software/liftOver_chains/hg38ToHs1.over.chain GSE181373_K562.hs1liftOver.bed GSE181373_K562.hs1liftOver.unmapped.bed
+~/software/liftOver GSE181373_U2OS_100k_bg4_bulk_1000.bio.bed ~/software/liftOver_chains/hg38ToHs1.over.chain GSE181373_U2OS.hs1liftOver.bed GSE181373_U2OS.hs1liftOver.unmapped.bed
+
+# Check numbers
+wc GSE181373_K562_100k_bg4_bulk_1000.bio.bed
+#   18365   55095  437847 GSE181373_K562_100k_bg4_bulk_1000.bio.bed
+wc GSE181373_K562.hs1liftOver.bed
+#   18290   54870  436084 GSE181373_K562.bio.hs1liftOver.bed
+wc GSE181373_U2OS_100k_bg4_bulk_1000.bio.bed
+#   35452  106356  847398 GSE181373_U2OS_100k_bg4_bulk_1000.bio.bed
+wc GSE181373_U2OS.hs1liftOver.bed
+#   35355  106065  845381 GSE181373_U2OS.bio.hs1liftOver.bed
+# Almost all peaks can be lift over.
+
+# Length:
+awk '{sum+=$3-$2}END{m=sum/NR; print m}' GSE181373_K562_100k_bg4_bulk_1000.bio.bed
+#1348.11
+awk '{sum+=$3-$2}END{m=sum/NR; print m}' GSE181373_K562.hs1liftOver.bed
+#1367.1
+awk '{sum+=$3-$2}END{m=sum/NR; print m}' GSE181373_U2OS_100k_bg4_bulk_1000.bio.bed
+#1013.13
+awk '{sum+=$3-$2}END{m=sum/NR; print m}' GSE181373_U2OS.hs1liftOver.bed
+#1020.9
+# Peaks are shorter after liftover. 
+
+# Overlap peaks with Quadron
+intersectBed -a GSE181373_K562.hs1liftOver.bed -b <(cat ../nonB_annotation/Homo_sapiens/autosomes_GQ.bed ../nonB_annotation/Homo_sapiens/chrX_GQ.bed ../nonB_annotation/Homo_sapiens/chrY_GQ.bed) -wo |cut -f1-3 |uniq |wc
+#   13377   40131  318786
+intersectBed -a GSE181373_U2OS.hs1liftOver.bed -b <(cat ../nonB_annotation/Homo_sapiens/autosomes_GQ.bed ../nonB_annotation/Homo_sapiens/chrX_GQ.bed ../nonB_annotation/Homo_sapiens/chrY_GQ.bed) -wo |cut -f1-3 |uniq |wc
+#   18366   55098  438592
+# => Clearly more than half for the first cell, and ~half for the second cell line.
+
+# How many G4s are included?
+intersectBed -a GSE181373_K562.hs1liftOver.bed -b <(cat ../nonB_annotation/Homo_sapiens/autosomes_GQ.bed ../nonB_annotation/Homo_sapiens/chrX_GQ.bed ../nonB_annotation/Homo_sapiens/chrY_GQ.bed) -wo |cut -f5-7 |uniq |wc
+#   50795  152385 1079781
+intersectBed -a GSE181373_U2OS.hs1liftOver.bed -b <(cat ../nonB_annotation/Homo_sapiens/autosomes_GQ.bed ../nonB_annotation/Homo_sapiens/chrX_GQ.bed ../nonB_annotation/Homo_sapiens/chrY_GQ.bed) -wo |cut -f5-7 |uniq |wc
+#   57194  171582 1220448
+#Quite a lot! Meaning each peak contains many G4s
+
+# # # ~~~~~~~~~~~~~~~~~~~~
+# Overlap with repeats of interests
+# ~~~~~~~~~~~~~~ Cell type K562
+intersectBed -a GSE181373_K562.hs1liftOver.bed -b ../methylation/human/repeats_of_interest.bed -wo |cut -f1-3 |uniq |wc
+#   143     429    3340
+# With how many repeat regions?
+intersectBed -a GSE181373_K562.hs1liftOver.bed -b ../methylation/human/repeats_of_interest.bed -wo |cut -f4-6 |uniq |wc
+#   198     594    4601
+# From how many Repeat types?
+intersectBed -a GSE181373_K562.hs1liftOver.bed  -b ../methylation/human/repeats_of_interest.bed -wo |cut -f7 |sort |uniq
+#Retroposon/SVA
+#Satellite/acro_ACRO1
+#Satellite/centr_GSATII
+#Satellite/centr_SST1
+#Satellite/subtelo_TAR1
+#Satellite_COMP-subunit_LSAU-BSAT_rnd-1_family-1
+#Satellite_COMP-subunit_LSAU-BSAT_rnd-1_family-4
+#Satellite_COMP-subunit_LSAU-BSAT_rnd-6_family-5403
+#Satellite_HSAT5
+#Satellite_LSAU
+#Satellite_MSR1
+#Satellite_SAT-VAR_rnd-6_family-3554
+#rRNA
+
+# But does any of these (overlapping regions, not full peaks!) have G4s in them?
+# (This gives the overlap between overlapping regions and G4s, not the number
+# of regions)
+intersectBed -a GSE181373_K562.hs1liftOver.bed -b ../methylation/human/repeats_of_interest.bed |intersectBed -a - -b <(cat ../nonB_annotation/Homo_sapiens/autosomes_GQ.bed ../nonB_annotation/Homo_sapiens/chrX_GQ.bed ../nonB_annotation/Homo_sapiens/chrY_GQ.bed) |uniq |wc
+#     146     438    3358
+
+# How many G4 per repeat type?
+intersectBed -b GSE181373_K562.hs1liftOver.bed -a ../methylation/human/repeats_of_interest.bed |intersectBed -a - -b <(cat ../nonB_annotation/Homo_sapiens/autosomes_GQ.bed ../nonB_annotation/Homo_sapiens/chrX_GQ.bed ../nonB_annotation/Homo_sapiens/chrY_GQ.bed) |cut -f4 |sort |uniq |wc
+# 2 Retroposon/SVA
+# 10 Satellite/acro_ACRO1
+# 7 Satellite/centr_GSATII
+# 12 Satellite/centr_SST1
+# 6 Satellite/subtelo_TAR1
+# 19 Satellite_COMP-subunit_LSAU-BSAT_rnd-1_family-1
+# 7 Satellite_COMP-subunit_LSAU-BSAT_rnd-1_family-4
+# 5 Satellite_HSAT5
+# 12 Satellite_LSAU
+# 47 Satellite_MSR1
+# 3 Satellite_SAT-VAR_rnd-6_family-3554
+# 16 rRNA
+
+
+# ~~~~~~~~~~~~~~ Cell type U20S
+intersectBed -a GSE181373_U2OS.hs1liftOver.bed -b ../methylation/human/repeats_of_interest.bed -wo |cut -f1-3 |uniq |wc
+#     164     492    3861
+# With how many repeat regions?
+intersectBed -a GSE181373_U2OS.hs1liftOver.bed -b ../methylation/human/repeats_of_interest.bed -wo |cut -f4-6 |uniq |wc
+#      206     618    4850
+# From how many Repeat types?
+intersectBed -a GSE181373_U2OS.hs1liftOver.bed  -b ../methylation/human/repeats_of_interest.bed -wo |cut -f7 |sort |uniq
+#Retroposon/SVA
+#Satellite/acro_ACRO1
+#Satellite/centr_GSATII
+#Satellite/centr_SST1
+#Satellite/subtelo_TAR1
+#Satellite_COMP-subunit_LSAU-BSAT_rnd-1_family-1
+#Satellite_COMP-subunit_LSAU-BSAT_rnd-1_family-4
+#Satellite_COMP-subunit_LSAU-BSAT_rnd-6_family-5403
+#Satellite_HSAT5
+#Satellite_LSAU
+#Satellite_MSR1
+#Satellite_SAT-VAR_rnd-6_family-3554
+#rRNA
+
+# Do they have G4s in them?
+intersectBed -a GSE181373_U2OS.hs1liftOver.bed -b ../methylation/human/repeats_of_interest.bed |intersectBed -a - -b <(cat ../nonB_annotation/Homo_sapiens/autosomes_GQ.bed ../nonB_annotation/Homo_sapiens/chrX_GQ.bed ../nonB_annotation/Homo_sapiens/chrY_GQ.bed) |uniq |wc
+#     162     486    3805
+
+
+# ~~~~~~~~~~ COMPARING CHM13 WITH HG38
+# How many of Repeats of interest were actually annotated in Hg38?
+~/software/liftOver ../methylation/human/repeats_of_interest.bed ~/software/liftOver_chains/hs1ToHg38.over.chain repeats_of_interests.Hg38liftOver.bed repeats_of_interests.Hg38liftOver.unmapped.bed
+
+# In CHM13:
+wc ../methylation/human/repeats_of_interest.bed
+#15592   62368  630421 ../methylation/human/repeats_of_interest.bed
+sort -k1,1 -k2,2n ../methylation/human/repeats_of_interest.bed |uniq |awk '{sum+=$3-$2}END{m=sum/NR; print m}'
+#658.368
+sort -k1,1 -k2,2n ../methylation/human/repeats_of_interest.bed |uniq |awk '{sum+=$3-$2}END{print sum}'
+#10265273
+
+# In HG38
+wc repeats_of_interests.Hg38liftOver.bed
+# 13730   54920  570085 repeats_of_interests.Hg38liftOver.bed
+
+sort -k1,1 -k2,2n repeats_of_interests.Hg38liftOver.bed |uniq |awk '{sum+=$3-$2}END{m=sum/NR; print m}'
+# 555.618
+sort -k1,1 -k2,2n repeats_of_interests.Hg38liftOver.bed |uniq |awk '{sum+=$3-$2}END{print sum}'
+# 6269592
+# Check regions on Un chromosomes
+cut -f1-3 repeats_of_interests.Hg38liftOver.bed |grep "_"|wc
+# 1572    4716   55532
+# That sum up to
+cut -f1-3 repeats_of_interests.Hg38liftOver.bed |grep "_"|awk '{sum+=$3-$2}END{print sum}'
+# 1074571
+ # Meaning about half of the total repeat length is not found in the anchored
+ # chromosomes of Hg38.
+
+
+# Checking lengths before and after liftover - only include anchored chromosomes
+# and remove overlap after liftover
+for i in $(cat repeats_of_interest.txt)
+do
+  before=`awk -v rep=$i '($4==rep){print}' ../methylation/human/repeats_of_interest.bed |sort -k1,1 -k2,2n |mergeBed -i - |awk '{sum+=$3-$2}END{print sum}'`
+  after=`awk -v rep=$i '($1!~/_/ && $4==rep){print}' repeats_of_interests.Hg38liftOver.bed |sort -k1,1 -k2,2n |mergeBed -i - |awk '{sum+=$3-$2}END{print sum}'`
+  echo $i" "$before" "$after |sed 's/ /\t/g'
+done
+# Quite a lot of overlapping sequences, I'll save the new merged bed files:
+for i in $(cat repeats_of_interest.txt)
+do
+  newname=`echo $i |sed 's/\//-/g'`
+  echo $newname
+  awk -v rep=$i '($1!~/_/ && $4==rep){print}' repeats_of_interests.Hg38liftOver.bed |sort -k1,1 -k2,2n |mergeBed -i - >$newname.Hg38liftOver.bed
+done
+
+
+# Check number of G4 before and after liftover - need to liftover G4s first!!
+~/software/liftOver <(cat ../nonB_annotation/Homo_sapiens/autosomes_GQ.bed ../nonB_annotation/Homo_sapiens/chrX_GQ.bed ../nonB_annotation/Homo_sapiens/chrY_GQ.bed) ~/software/liftOver_chains/hs1ToHg38.over.chain G4s.Hg38liftOver.bed G4s.Hg38liftOver.unmapped.bed
+
+# This overlaps the chm13 repeats with our own G4 annotation, and the translated
+# hg38 repeats with the translated G4 (that potentially can be many-to-one), and
+# returns the number of unique G4s.
+for i in $(cat repeats_of_interest.txt)
+do
+  before=`awk -v rep=$i '($4==rep){print}' ../methylation/human/repeats_of_interest.bed |intersectBed -a - -b <(cat ../nonB_annotation/Homo_sapiens/autosomes_GQ.bed ../nonB_annotation/Homo_sapiens/chrX_GQ.bed ../nonB_annotation/Homo_sapiens/chrY_GQ.bed) | sort |uniq |wc -l`
+  newname=`echo $i |sed 's/\//-/g'`
+  after=`intersectBed -a $newname.Hg38liftOver.bed -b G4s.Hg38liftOver.bed |sort |uniq |wc -l`
+  echo $i" "$before" "$after |sed 's/ /\t/g'
+done
+
+# The last numbers that would be good to have is the number of peaks for each
+# repeat type (and cell type).
+for i in $(cat repeats_of_interest.txt)
+do
+  c1=`awk -v rep=$i '($4==rep){print}' ../methylation/human/repeats_of_interest.bed |intersectBed -a - -b GSE181373_K562.hs1liftOver.bed |grep -v "chrM" |sort |uniq |wc -l`
+  c2=`awk -v rep=$i '($4==rep){print}' ../methylation/human/repeats_of_interest.bed |intersectBed -a - -b GSE181373_U2OS.hs1liftOver.bed |grep -v "chrM" |sort |uniq |wc -l`
+    echo $i"    "$c1"    "$c2
+done
+
+for i in $(cat repeats_of_interest.txt)
+do
+  c1=`awk -v rep=$i '($4==rep){print}' repeats_of_interests.Hg38liftOver.bed |intersectBed -a - -b  GSE181373_K562_100k_bg4_bulk_1000.bio.bed |grep -v "chrM" |sort |uniq |wc -l`
+  c2=`awk -v rep=$i '($4==rep){print}' repeats_of_interests.Hg38liftOver.bed |intersectBed -a - -b  GSE181373_U2OS_100k_bg4_bulk_1000.bio.bed|grep -v "chrM" |sort |uniq |wc -l`
+    echo $i"    "$c1"    "$c2
+done
