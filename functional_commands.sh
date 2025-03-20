@@ -10,7 +10,7 @@
 # And the actual files can be downloaded from: 
 # https://github.com/makovalab-psu/GreatApeT2T-G4s/tree/main/datasets/functionalOutputs/Homo_sapiens
 
-# Abbreviations for functional classes and file names used inhouse our found in 
+# Abbreviations for functional classes and file names used inhouse are found in 
 # T2T_primate_nonB/helpfiles/functional_classes.txt 
 func_path=/path/to/annotation/files
 mkdir ref/annotation/human/

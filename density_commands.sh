@@ -1,5 +1,9 @@
 
-################################## DENSITIES ###################################
+###################################################################################
+# CODE FOR CALCULATING NON-B MOTIF DENSITIES AND GC CONTENT OVER THE GENOMES 
+
+
+############################### DENSITIES ###################################
 # written by Linnéa Smeds, August 2024
 # Summarizes the non-B DNA content along the genome in 100kb windows
 

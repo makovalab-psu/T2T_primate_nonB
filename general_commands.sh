@@ -1,8 +1,8 @@
 ################################################################################
 # CODE FOR THE PAPER 
 # Non-canonical DNA in human and other ape telomere-to-telomere genomes
-# https://www.biorxiv.org/content/10.1101/2024.09.02.610891v1
-# Written by Linnéa Smeds Aug-Sept 2024
+# https://www.biorxiv.org/content/10.1101/2024.09.02.610891v3
+# Written by Linnéa Smeds Aug 2024 - March 2025
 
 # Non-B annotation in bb format can be found here:
 # Human
@@ -40,8 +40,6 @@
 
 ############ CREATE NON-OVERLAPPING BED FILES FROM NON-B ANNOTATION ############
 nb_path=/path/to/nonB/tracks/converted/to/bed
-#INHOUSE nb_path="/storage/group/kdm16/default/shared/nonB_annotation/T2Tv2_primates/"
-#INHOUSE module load bedtools/2.31.0
 mkdir nonB_annotation 
 
 # Primary haplotype assembly 

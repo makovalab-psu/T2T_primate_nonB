@@ -1,3 +1,9 @@
+################################################################################
+# CODE FOR CALCULATING ENRICHMENT IN CENTROMERES AND CENTROMERE FLANKS. ALSO 
+# LOOKS INTO CENP-B PRESENCE, AND A DEEPER LOOK INTO THE BORNEAN ORANGUTAN 
+# CHROMOSOME 10 WHERE ONE HAPLOTYPE LACKS A CENTROMERE. 
+
+
 ####################### ENRICHMENT IN CENTROMERES ##############################
 # written by Linnéa Smeds, October 2024
 # Enrichment and depletion of non-B DNA in centromeres 

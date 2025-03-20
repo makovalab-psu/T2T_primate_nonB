@@ -1,3 +1,8 @@
+################################################################################
+# CODE FOR COMPARING THE T2T PRIMATE NON-B DNA ANNOTATION WITH OLD ASSEMBLIES
+
+
+
 ################### ENRICHMENT OF NON-B DNA IN NEW SEQUENCE ####################
 # written by Linnéa Smeds, September 2024
 # This code was also used for the primates autosome paper (Yoo et al 2024) 

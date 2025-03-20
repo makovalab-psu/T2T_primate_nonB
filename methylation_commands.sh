@@ -1,3 +1,12 @@
+################################################################################
+# CODE FOR INVESTIGATING METHYLATION PATTERNS IN REPEATS AND G4 MOTIFS
+
+# # # # # TABLE OF CONTENTS 
+# - METHYLATION IN SATELLITES AND OTHER REPEATS
+# - DEEPER INVESTIGATION OF CERTAIN REPEATS 
+# - MORE DETAILED STUDY OF LSAU 
+# - INCORPORATING ANOTHER EXPERIMENTAL DATASET 
+
 ################## METHYLATION IN SATELLITES AND OTHER REPEATS #################
 # written by Linnéa Smeds, September 2024
 # Code for analysing the methylation in satellites and repeats enriched for 
@@ -134,7 +143,7 @@ cut -f1 temp_meth_in_chm13_nt_in_HG002_SVA.txt |uniq -c
 
 
 
-###############################################################################
+################### DEEPER INVESTIGATION OF CERTAIN REPEATS ###################
 # Look at G4s with low methylation in interesting repeats.
 # We will focus on the satellites: LSAU, GSAT, GSATII, SAT-VAR_rnd-6*3554,
 # ACRO1 and TAR1. These are found in the file: 
@@ -194,8 +203,8 @@ do
 done
 
 
-###############################################################################
-# MORE DETAILED STUDY OF LSAU
+######################### MORE DETAILED STUDY OF LSAU #########################
+
 # LSAU is the satellite with most G4s, so we focus on this. 
 
 # Save full information before merging with G4s 
@@ -287,7 +296,7 @@ done
 # plot_FigS2_methylation_LSAU.R 
 
 
-###############################################################################
+################## INCORPORATING ANOTHER EXPERIMENTAL DATASET ##################
 # TRY INCORPORATING OTHER EXPERIMENTAL DATA, BG PEAKS FROM HU ET AL. 2021
 
 mkdir G4peaks

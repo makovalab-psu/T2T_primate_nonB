@@ -1,3 +1,9 @@
+################################################################################
+# CODE FOR CALCULATING ENRICHMENT IN REPETITIVE SEQUENCES INCLUDING CENSAT 
+# REPEATS AND REPEAT GROUPS. 
+
+
+
 ########################## ENRICHMENT IN REPEATS ###############################
 # written by Linnéa Smeds, August 2024
 # Code for analysing enrichment of non-B DNA motifs in repetitive sequences. 
