@@ -5,7 +5,6 @@
 ################################################################################
 # Setting up, loading R libraries and set working directory
 rm(list=ls())
-setwd("~/Documents/T2T_nonB_paper/")
 require(tidyverse)
 require(cowplot)
 require(ggtext)
@@ -31,10 +30,9 @@ tib<-file %>% read.table(header=TRUE) %>% as_tibble() %>%
   pivot_longer(c(-Chr,-Species), names_to="NonB", values_to="value") %>%
   mutate(head=case_when(Species=="bonobo" ~ "<b>A.</b> Bonobo",
                         Species=="chimp" ~ "<b>B.</b> Chimpanzee",
-                        Species=="human" ~ "<b>C.</b> Human",
-                        Species=="gorilla" ~ "<b>D.</b> Gorilla",
-                        Species=="borang" ~ "<b>E.</b> Bornean orangutan",
-                        Species=="sorang" ~ "<b>F.</b> Sumatran orangutan"))%>%
+                        Species=="gorilla" ~ "<b>C.</b> Gorilla",
+                        Species=="borang" ~ "<b>D.</b> Bornean orangutan",
+                        Species=="sorang" ~ "<b>E.</b> Sumatran orangutan"))%>%
   mutate(NonB = str_replace_all(NonB, c('GQ' = 'G4')))
 tib <- tib %>% mutate(textcol=if_else(value>0.8*max(tib$value) | value<0.3,"white","black")) %>% 
     mutate(Type="centro") %>% inner_join(gctib)
